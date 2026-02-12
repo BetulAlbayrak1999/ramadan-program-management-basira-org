@@ -20,7 +20,7 @@ const FIELDS = [
   { key: 'extra_work', label: 'أعمال إضافية', icon: <Star size={16} /> },
 ];
 
-const RAMADAN_START = '2026-02-19';
+const RAMADAN_START = '2026-01-19';
 const RAMADAN_END = '2026-03-19';
 
 function formatDate(d) {

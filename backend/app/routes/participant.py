@@ -17,7 +17,7 @@ def save_card(
     db: Session = Depends(get_db),
 ):
     """Create a daily card. Each date can only be submitted once (no editing)."""
-    RAMADAN_START = date(2026, 2, 19)
+    RAMADAN_START = date(2026, 1, 19)
     RAMADAN_END = date(2026, 3, 19)
 
     if data.date > date.today():

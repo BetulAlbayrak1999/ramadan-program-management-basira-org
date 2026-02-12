@@ -27,7 +27,7 @@ Full-stack web application for managing Ramadan daily tracking programs. Partici
 
 ---
 
-## Getting Started
+## Getting Started 
 
 ### 1. Clone the repository
 
