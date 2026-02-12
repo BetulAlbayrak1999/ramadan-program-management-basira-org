@@ -11,16 +11,16 @@ import Pagination, { paginate } from '../components/Pagination';
 
 const SCORE_FIELDS = [
   { key: 'quran', label: 'وِرد القرآن', icon: <BookOpen size={14} /> },
+  { key: 'tadabbur', label: 'التدبر', icon: <BookMarked size={14} /> },
   { key: 'duas', label: 'الأدعية', icon: <Heart size={14} /> },
   { key: 'taraweeh', label: 'صلاة التراويح', icon: <Building2 size={14} /> },
   { key: 'tahajjud', label: 'التهجد والوتر', icon: <Moon size={14} /> },
   { key: 'duha', label: 'صلاة الضحى', icon: <Sun size={14} /> },
   { key: 'rawatib', label: 'السنن الرواتب', icon: <Gem size={14} /> },
-  { key: 'main_lesson', label: 'المقطع الأساسي', icon: <Headphones size={14} /> },
-  { key: 'required_lesson', label: 'المقطع الواجب', icon: <BookMarked size={14} /> },
-  { key: 'enrichment_lesson', label: 'المقطع الإثرائي', icon: <Lightbulb size={14} /> },
+  { key: 'main_lesson', label: 'المقطع الأساسي:اعرف نبيك..تعرف طريقك', icon: <Headphones size={14} /> },
+  { key: 'enrichment_lesson', label: 'المقطع الهادف', icon: <Lightbulb size={14} /> },
   { key: 'charity_worship', label: 'عبادة متعدية للغير', icon: <HeartHandshake size={14} /> },
-  { key: 'extra_work', label: 'أعمال إضافية', icon: <Star size={14} /> },
+  { key: 'extra_work', label: 'عمل إضافي', icon: <Star size={14} /> },
 ];
 
 export default function DashboardPage() {
@@ -277,7 +277,7 @@ export default function DashboardPage() {
 
             {detailCard.extra_work_description && (
               <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: 'var(--primary-light)', borderRadius: 8, fontSize: '0.8rem' }}>
-                <strong>وصف الأعمال الإضافية:</strong> {detailCard.extra_work_description}
+                <strong>وصف العمل الإضافي:</strong> {detailCard.extra_work_description}
               </div>
             )}
           </div>

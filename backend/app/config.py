@@ -19,8 +19,7 @@ class Settings(BaseSettings):
 
     # Super Admin
     SUPER_ADMIN_EMAIL: str = "admin@example.com"
-    SUPER_ADMIN_PASSWORD: str = "Admin@123456"
-
+    SUPER_ADMIN_PASSWORD: str = "xxx"
     # Notifications
     ENABLE_EMAIL_NOTIFICATIONS: bool = True
 

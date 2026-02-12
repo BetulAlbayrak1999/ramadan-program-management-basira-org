@@ -5,13 +5,13 @@ from pydantic import BaseModel, Field
 class DailyCardCreate(BaseModel):
     date: date
     quran: float = Field(default=0, ge=0, le=10)
+    tadabbur: float = Field(default=0, ge=0, le=10)
     duas: float = Field(default=0, ge=0, le=10)
     taraweeh: float = Field(default=0, ge=0, le=10)
     tahajjud: float = Field(default=0, ge=0, le=10)
     duha: float = Field(default=0, ge=0, le=10)
     rawatib: float = Field(default=0, ge=0, le=10)
     main_lesson: float = Field(default=0, ge=0, le=10)
-    required_lesson: float = Field(default=0, ge=0, le=10)
     enrichment_lesson: float = Field(default=0, ge=0, le=10)
     charity_worship: float = Field(default=0, ge=0, le=10)
     extra_work: float = Field(default=0, ge=0, le=10)
@@ -22,6 +22,7 @@ def card_to_response(card) -> dict:
     """Build card response dict matching the frontend expected format."""
     return {
         "id": card.id,
+        "tadabbur": card.tadabbur,
         "user_id": card.user_id,
         "date": card.date.isoformat(),
         "quran": card.quran,
@@ -31,7 +32,6 @@ def card_to_response(card) -> dict:
         "duha": card.duha,
         "rawatib": card.rawatib,
         "main_lesson": card.main_lesson,
-        "required_lesson": card.required_lesson,
         "enrichment_lesson": card.enrichment_lesson,
         "charity_worship": card.charity_worship,
         "extra_work": card.extra_work,

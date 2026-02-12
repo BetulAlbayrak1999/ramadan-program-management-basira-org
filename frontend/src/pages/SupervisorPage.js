@@ -12,16 +12,16 @@ import Pagination, { paginate } from '../components/Pagination';
 
 const SCORE_FIELDS = [
   { key: 'quran', label: 'وِرد القرآن', icon: <BookOpen size={14} /> },
+  { key: 'tadabbur', label: 'التدبر', icon: <BookMarked size={14} /> },
   { key: 'duas', label: 'الأدعية', icon: <Heart size={14} /> },
   { key: 'taraweeh', label: 'صلاة التراويح', icon: <Building2 size={14} /> },
   { key: 'tahajjud', label: 'التهجد والوتر', icon: <Moon size={14} /> },
   { key: 'duha', label: 'صلاة الضحى', icon: <Sun size={14} /> },
   { key: 'rawatib', label: 'السنن الرواتب', icon: <Gem size={14} /> },
-  { key: 'main_lesson', label: 'المقطع الأساسي', icon: <Headphones size={14} /> },
-  { key: 'required_lesson', label: 'المقطع الواجب', icon: <BookMarked size={14} /> },
-  { key: 'enrichment_lesson', label: 'المقطع الإثرائي', icon: <Lightbulb size={14} /> },
+  { key: 'main_lesson', label: 'المقطع الأساسي:اعرف نبيك..تعرف طريقك', icon: <Headphones size={14} /> },
+  { key: 'enrichment_lesson', label: 'المقطع الهادف', icon: <Lightbulb size={14} /> },
   { key: 'charity_worship', label: 'عبادة متعدية للغير', icon: <HeartHandshake size={14} /> },
-  { key: 'extra_work', label: 'أعمال إضافية', icon: <Star size={14} /> },
+  { key: 'extra_work', label: 'عمل إضافي', icon: <Star size={14} /> },
 ];
 
 function getDefaultDateRange() {
@@ -824,7 +824,7 @@ export default function SupervisorPage() {
                   </div>
                 ))}
                 <div className="form-group mt-2">
-                  <label className="form-label">وصف الأعمال الإضافية</label>
+                  <label className="form-label">وصف العمل الإضافي</label>
                   <textarea className="form-textarea" rows={2}
                     value={editData.extra_work_description || ''}
                     onChange={(e) => setEditData((d) => ({ ...d, extra_work_description: e.target.value }))}
@@ -862,7 +862,7 @@ export default function SupervisorPage() {
                     ))}
                     {cardDetail.extra_work_description && (
                       <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: 'var(--primary-light)', borderRadius: 8, fontSize: '0.85rem' }}>
-                        <strong>وصف الأعمال الإضافية:</strong> {cardDetail.extra_work_description}
+                        <strong>وصف العمل الإضافي:</strong> {cardDetail.extra_work_description}
                       </div>
                     )}
                   </>

@@ -184,11 +184,11 @@ ENABLE_EMAIL_NOTIFICATIONS=True
 | 4 | التهجد والوتر | Tahajjud & Witr |
 | 5 | صلاة الضحى | Duha prayer |
 | 6 | السنن الرواتب | Rawatib (Sunnah prayers) |
-| 7 | المقطع الأساسي | Main lesson |
+| 7 | المقطع الأساسي:اعرف نبيك..تعرف طريقك | Main lesson |
 | 8 | المقطع الواجب | Required lesson |
-| 9 | المقطع الإثرائي | Enrichment lesson |
+| 9 | المقطع الهادف | Enrichment lesson |
 | 10 | عبادة متعدية | Charity/community worship |
-| 11 | أعمال إضافية | Extra deeds |
+| 11 | عمل إضافي | Extra deeds |
 
 Each category is scored 0–10. Maximum daily score: **110 points**.
 
@@ -382,13 +382,13 @@ ramadan-program-management-basira/
 | user_id | Integer (FK) | Card owner |
 | date | Date (unique with user_id) | Card date |
 | quran | Float (0-10) | Quran recitation score |
+| tadabbur | Float (0-10) | tadabbur score |
 | duas | Float (0-10) | Duas score |
 | taraweeh | Float (0-10) | Taraweeh prayer score |
 | tahajjud | Float (0-10) | Tahajjud & Witr score |
 | duha | Float (0-10) | Duha prayer score |
 | rawatib | Float (0-10) | Sunnah prayers score |
 | main_lesson | Float (0-10) | Main lesson score |
-| required_lesson | Float (0-10) | Required lesson score |
 | enrichment_lesson | Float (0-10) | Enrichment lesson score |
 | charity_worship | Float (0-10) | Community worship score |
 | extra_work | Float (0-10) | Extra deeds score |

@@ -8,16 +8,16 @@ import {
 
 const FIELDS = [
   { key: 'quran', label: 'وِرد القرآن', icon: <BookOpen size={16} /> },
+  { key: 'tadabbur', label: 'التدبر', icon: <BookMarked size={16} /> },
   { key: 'duas', label: 'الأدعية', icon: <Heart size={16} /> },
   { key: 'taraweeh', label: 'صلاة التراويح', icon: <Building2 size={16} /> },
   { key: 'tahajjud', label: 'التهجد والوتر', icon: <Moon size={16} /> },
   { key: 'duha', label: 'صلاة الضحى', icon: <Sun size={16} /> },
   { key: 'rawatib', label: 'السنن الرواتب', icon: <Gem size={16} /> },
-  { key: 'main_lesson', label: 'المقطع الأساسي', icon: <Headphones size={16} /> },
-  { key: 'required_lesson', label: 'المقطع الواجب', icon: <BookMarked size={16} /> },
-  { key: 'enrichment_lesson', label: 'المقطع الإثرائي', icon: <Lightbulb size={16} /> },
+  { key: 'main_lesson', label: 'المقطع الأساسي:اعرف نبيك..تعرف طريقك', icon: <Headphones size={16} /> },
+  { key: 'enrichment_lesson', label: 'المقطع الهادف', icon: <Lightbulb size={16} /> },
   { key: 'charity_worship', label: 'عبادة متعدية للغير', icon: <HeartHandshake size={16} /> },
-  { key: 'extra_work', label: 'أعمال إضافية', icon: <Star size={16} /> },
+  { key: 'extra_work', label: 'عمل إضافي', icon: <Star size={16} /> },
 ];
 
 const RAMADAN_START = '2026-01-19';
@@ -265,7 +265,7 @@ export default function DailyCardPage() {
             ))}
             {card.extra_work_description && (
               <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: 'var(--primary-light)', borderRadius: 8, fontSize: '0.85rem' }}>
-                <strong>وصف الأعمال الإضافية:</strong> {card.extra_work_description}
+                <strong>وصف العمل الإضافي:</strong> {card.extra_work_description}
               </div>
             )}
           </div>
@@ -332,11 +332,11 @@ export default function DailyCardPage() {
             })}
 
             <div className="form-group mt-2">
-              <label className="form-label">وصف الأعمال الإضافية (اختياري)</label>
+              <label className="form-label">وصف العمل الإضافي (اختياري)</label>
               <textarea className="form-textarea"
                 value={card.extra_work_description || ''}
                 onChange={(e) => setCard((c) => ({ ...c, extra_work_description: e.target.value }))}
-                placeholder="اكتب وصفاً للأعمال الإضافية..."
+                placeholder="اكتب وصفاً للعمل الإضافي.."
                 rows={2}
               />
             </div>
@@ -400,7 +400,7 @@ export default function DailyCardPage() {
 
             {card.extra_work_description && (
               <div style={{ marginTop: '0.5rem', padding: '0.4rem', background: 'var(--primary-light)', borderRadius: 8, fontSize: '0.8rem' }}>
-                <strong>وصف الأعمال الإضافية:</strong> {card.extra_work_description}
+                <strong>وصف العمل الإضافي:</strong> {card.extra_work_description}
               </div>
             )}
 
