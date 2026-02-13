@@ -111,7 +111,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">الدولة *</label>
+            <label className="form-label">مكان الإقامة *</label>
             <input className="form-input" value={form.country}
               onChange={(e) => set('country', e.target.value)} required placeholder="اسم الدولة" />
           </div>

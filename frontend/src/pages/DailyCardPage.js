@@ -92,7 +92,7 @@ export default function DailyCardPage() {
         setSubmitted(true);
       } else {
         const empty = {};
-        FIELDS.forEach((f) => { empty[f.key] = 0; });
+        FIELDS.forEach((f) => { empty[f.key] = ''; });
         empty.extra_work_description = '';
         setCard(empty);
         setSubmitted(false);
@@ -313,8 +313,9 @@ export default function DailyCardPage() {
                     min="0"
                     max="10"
                     step="0.5"
-                    value={card[f.key] ?? 0}
+                    value={card[f.key] ?? ''}
                     onChange={(e) => setScore(f.key, e.target.value)}
+                    placeholder="00"
                     style={{
                       width: 65,
                       textAlign: 'center',
