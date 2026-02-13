@@ -51,6 +51,12 @@ def on_startup():
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE halqas ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
 
+    # Migrate: add tadabbur column to daily_cards if missing
+    daily_card_columns = [c["name"] for c in inspector.get_columns("daily_cards")]
+    if "tadabbur" not in daily_card_columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE daily_cards ADD COLUMN tadabbur DOUBLE PRECISION DEFAULT 0"))
+
     db = SessionLocal()
     try:
         if not db.query(SiteSettings).first():
