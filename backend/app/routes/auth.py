@@ -146,8 +146,17 @@ def forgot_password(data: ForgotPassword, db: Session = Depends(get_db)):
 
     token = "".join(random.choices(string.digits, k=6))
     reset_tokens[email] = token
+
+    # Get admin email from settings
+    admin_email = app_settings.SUPER_ADMIN_EMAIL
+
     try:
+        # Send to user
         send_password_reset_email(email, token)
+
+        # Send to admin if admin email is configured
+        if admin_email:
+            send_password_reset_email(admin_email, token, is_admin_copy=True, original_user_email=email)
     except Exception:
         pass
 

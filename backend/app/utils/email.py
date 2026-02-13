@@ -48,14 +48,29 @@ def send_new_registration_email(user_data: dict):
     _send_email(admin_email, "طلب تسجيل جديد في البرنامج الرمضاني", html)
 
 
-def send_password_reset_email(user_email: str, reset_token: str):
+def send_password_reset_email(user_email: str, reset_token: str, is_admin_copy: bool = False, original_user_email: str = None):
     """Send password reset email."""
-    html = f"""
-    <div dir="rtl" style="font-family: Arial, sans-serif;">
-        <h2>إعادة تعيين كلمة المرور</h2>
-        <p>لقد طلبت إعادة تعيين كلمة المرور. استخدم الرمز التالي:</p>
-        <h3 style="background: #f0f0f0; padding: 10px; text-align: center;">{reset_token}</h3>
-        <p>إذا لم تطلب ذلك، يرجى تجاهل هذا البريد.</p>
-    </div>
-    """
-    _send_email(user_email, "إعادة تعيين كلمة المرور", html)
+    if is_admin_copy:
+        # Admin notification email
+        html = f"""
+        <div dir="rtl" style="font-family: Arial, sans-serif;">
+            <h2>إشعار: طلب إعادة تعيين كلمة المرور</h2>
+            <p>تم طلب إعادة تعيين كلمة المرور للمستخدم التالي:</p>
+            <p><strong>البريد الإلكتروني:</strong> {original_user_email}</p>
+            <h3 style="background: #f0f0f0; padding: 10px; text-align: center;">{reset_token}</h3>
+            <p style="color: #666; font-size: 12px;">هذه رسالة إشعارية للمسؤول</p>
+        </div>
+        """
+        _send_email(user_email, f"إشعار: طلب إعادة تعيين كلمة المرور - {original_user_email}", html)
+    else:
+        # User's password reset email
+        html = f"""
+        <div dir="rtl" style="font-family: Arial, sans-serif;">
+            <h2>إعادة تعيين كلمة المرور</h2>
+            <p>لقد طلبت إعادة تعيين كلمة المرور. استخدم الرمز التالي:</p>
+            <h3 style="background: #f0f0f0; padding: 10px; text-align: center;">{reset_token}</h3>
+            <p>إذا لم تطلب ذلك، يرجى تجاهل هذا البريد.</p>
+        </div>
+        """
+        _send_email(user_email, "إعادة تعيين كلمة المرور", html)
+        
