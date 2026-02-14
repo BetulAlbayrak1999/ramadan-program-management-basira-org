@@ -21,16 +21,17 @@ reset_tokens = {}
 
 
 @router.post("/register")
-def register(data: UserRegister, db: Session = Depends(get_db)):
+async def register(data: UserRegister, db: Session = Depends(get_db)):
     """Register a new participant."""
     if data.password != data.confirm_password:
         raise HTTPException(400, detail="كلمتا المرور غير متطابقتين")
 
-    existing = db.query(User).filter_by(email=data.email.lower().strip()).first()
+    existing = await db.query(User).filter_by(email=data.email.lower().strip()).first()
     if existing:
         raise HTTPException(400, detail="البريد الإلكتروني مسجل مسبقاً")
 
-    max_mid = db.query(func.max(User.member_id)).scalar()
+    last_user = await db.query(User).order_by(User.member_id.desc()).first()
+    max_mid = last_user.member_id if last_user else None
     next_member_id = (max_mid + 1) if max_mid else 1000
 
     user = User(
@@ -48,12 +49,12 @@ def register(data: UserRegister, db: Session = Depends(get_db)):
     user.set_password(data.password)
 
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
 
     # Send notification email
     try:
-        site = db.query(SiteSettings).first()
+        site = await db.query(SiteSettings).first()
         if site and site.enable_email_notifications:
             send_new_registration_email(user_to_response(user))
     except Exception:
@@ -121,14 +122,14 @@ async def login(data: UserLogin, db: Session = Depends(get_db)):
 
 
 @router.get("/me")
-def get_me(user: User = Depends(get_current_user)):
+async def get_me(user: User = Depends(get_current_user)):
     """Get current user profile. Returns a refreshed token to extend the session."""
     new_token = create_access_token(user.id)
     return {"user": user_to_response(user), "token": new_token}
 
 
 @router.put("/profile")
-def update_profile(
+async def update_profile(
     data: UserProfileUpdate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -140,13 +141,13 @@ def update_profile(
         if value is not None:
             setattr(user, field, value)
 
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return {"message": "تم تحديث الملف الشخصي", "user": user_to_response(user)}
 
 
 @router.post("/change-password")
-def change_password(
+async def change_password(
     data: ChangePassword,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -159,15 +160,15 @@ def change_password(
         raise HTTPException(400, detail="كلمتا المرور غير متطابقتين")
 
     user.set_password(data.new_password)
-    db.commit()
+    await db.commit()
     return {"message": "تم تغيير كلمة المرور بنجاح"}
 
 
 @router.post("/forgot-password")
-def forgot_password(data: ForgotPassword, db: Session = Depends(get_db)):
+async def forgot_password(data: ForgotPassword, db: Session = Depends(get_db)):
     """Request password reset."""
     email = data.email.lower().strip()
-    user = db.query(User).filter_by(email=email).first()
+    user = await db.query(User).filter_by(email=email).first()
 
     if not user:
         raise HTTPException(404, detail="هذا البريد الإلكتروني غير مسجل في النظام")
@@ -192,19 +193,19 @@ def forgot_password(data: ForgotPassword, db: Session = Depends(get_db)):
 
 
 @router.post("/reset-password")
-def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
+async def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
     """Reset password with token."""
     email = data.email.lower().strip()
 
     if reset_tokens.get(email) != data.token:
         raise HTTPException(400, detail="رمز إعادة التعيين غير صحيح")
 
-    user = db.query(User).filter_by(email=email).first()
+    user = await db.query(User).filter_by(email=email).first()
     if not user:
         raise HTTPException(404, detail="المستخدم غير موجود")
 
     user.set_password(data.new_password)
-    db.commit()
+    await db.commit()
     del reset_tokens[email]
 
     return {"message": "تم إعادة تعيين كلمة المرور بنجاح"}

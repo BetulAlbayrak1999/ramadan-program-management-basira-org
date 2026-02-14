@@ -21,69 +21,69 @@ RAMADAN_END = date(2026, 3, 19)
 require_supervisor = RoleChecker("supervisor", "super_admin")
 
 
-def _resolve_halqa(user, db, halqa_id=None):
+async def _resolve_halqa(user, db, halqa_id=None):
     """Resolve which halqa to use.
     - super_admin: can pick any halqa via halqa_id, or None for all members.
     - supervisor: always uses their own halqa (halqa_id ignored).
     """
     if user.role == "super_admin":
         if halqa_id:
-            halqa = db.get(Halqa, halqa_id)
+            halqa = await db.get(Halqa, halqa_id)
             if not halqa:
                 raise HTTPException(404, detail="الحلقة غير موجودة")
             return halqa
         return None  # means "all halqas"
     # Regular supervisor
-    halqa = db.query(Halqa).filter_by(supervisor_id=user.id).first()
+    halqa = await db.query(Halqa).filter_by(supervisor_id=user.id).first()
     if not halqa:
         raise HTTPException(404, detail="لا توجد حلقة مسندة إليك")
     return halqa
 
 
-def _get_members(db, halqa):
+async def _get_members(db, halqa):
     """Get active members for a halqa, or all active users if halqa is None (super_admin)."""
     if halqa:
-        return db.query(User).filter_by(halqa_id=halqa.id, status="active").all()
+        return await db.query(User).filter_by(halqa_id=halqa.id, status="active").all()
     # Super admin sees all active users (including supervisors and unassigned)
-    return db.query(User).filter(User.status == "active", User.role != "super_admin").all()
+    return await db.query(User).filter(User.status == "active", User.role != "super_admin").all()
 
 
-def _verify_member_access(user, member_id, db):
+async def _verify_member_access(user, member_id, db):
     """Verify the supervisor/admin can access this member."""
-    member = db.get(User, member_id)
+    member = await db.get(User, member_id)
     if not member:
         raise HTTPException(404, detail="المشارك غير موجود")
     if user.role == "super_admin":
         return member
-    halqa = db.query(Halqa).filter_by(supervisor_id=user.id).first()
+    halqa = await db.query(Halqa).filter_by(supervisor_id=user.id).first()
     if not halqa or member.halqa_id != halqa.id:
         raise HTTPException(403, detail="المشارك ليس في حلقتك")
     return member
 
 
 @router.get("/halqas")
-def get_all_halqas(
+async def get_all_halqas(
     user: User = Depends(require_supervisor),
     db: Session = Depends(get_db),
 ):
     """Get halqas available to this user. Super admin sees all, supervisor sees own."""
     if user.role == "super_admin":
-        halqas = db.query(Halqa).all()
+        halqas = await db.query(Halqa).all()
     else:
-        halqa = db.query(Halqa).filter_by(supervisor_id=user.id).first()
+        halqa = await db.query(Halqa).filter_by(supervisor_id=user.id).first()
         halqas = [halqa] if halqa else []
     return {"halqas": [halqa_to_response(h) for h in halqas]}
 
 
 @router.get("/members")
-def get_halqa_members(
+async def get_halqa_members(
     halqa_id: int = Query(None),
     user: User = Depends(require_supervisor),
     db: Session = Depends(get_db),
 ):
     """Get members. Super admin can filter by halqa_id or see all."""
-    halqa = _resolve_halqa(user, db, halqa_id)
-    members = _get_members(db, halqa)
+    halqa = await _resolve_halqa(user, db, halqa_id)
+    members = await _get_members(db, halqa)
     return {
         "halqa": halqa_to_response(halqa) if halqa else None,
         "members": [user_to_response(m) for m in members],
@@ -91,14 +91,14 @@ def get_halqa_members(
 
 
 @router.get("/member/{member_id}/cards")
-def get_member_cards(
+async def get_member_cards(
     member_id: int,
     user: User = Depends(require_supervisor),
     db: Session = Depends(get_db),
 ):
     """Get all cards for a specific member."""
-    member = _verify_member_access(user, member_id, db)
-    cards = db.query(DailyCard).filter_by(user_id=member_id).order_by(DailyCard.date.desc()).all()
+    member = await _verify_member_access(user, member_id, db)
+    cards = await db.query(DailyCard).filter_by(user_id=member_id).order_by(DailyCard.date.desc()).all()
     return {
         "member": user_to_response(member),
         "cards": [card_to_response(c) for c in cards],
@@ -106,15 +106,15 @@ def get_member_cards(
 
 
 @router.get("/member/{member_id}/card/{card_date}")
-def get_member_card_detail(
+async def get_member_card_detail(
     member_id: int,
     card_date: str,
     user: User = Depends(require_supervisor),
     db: Session = Depends(get_db),
 ):
     """Get a specific daily card for a member (full detail)."""
-    member = _verify_member_access(user, member_id, db)
-    card = db.query(DailyCard).filter_by(
+    member = await _verify_member_access(user, member_id, db)
+    card = await db.query(DailyCard).filter_by(
         user_id=member_id, date=date.fromisoformat(card_date)
     ).first()
 
@@ -124,7 +124,7 @@ def get_member_card_detail(
 
 
 @router.put("/member/{member_id}/card/{card_date}")
-def update_member_card(
+async def update_member_card(
     member_id: int,
     card_date: str,
     data: DailyCardCreate,
@@ -132,7 +132,7 @@ def update_member_card(
     db: Session = Depends(get_db),
 ):
     """Create or update a daily card for a member."""
-    member = _verify_member_access(user, member_id, db)
+    member = await _verify_member_access(user, member_id, db)
 
     target_date = date.fromisoformat(card_date)
     if target_date > date.today():
@@ -140,7 +140,7 @@ def update_member_card(
     if target_date < RAMADAN_START or target_date > RAMADAN_END:
         raise HTTPException(400, detail="البطاقات مسموحة فقط خلال شهر رمضان")
 
-    card = db.query(DailyCard).filter_by(user_id=member_id, date=target_date).first()
+    card = await db.query(DailyCard).filter_by(user_id=member_id, date=target_date).first()
     if not card:
         card = DailyCard(user_id=member_id, date=target_date)
         db.add(card)
@@ -149,45 +149,45 @@ def update_member_card(
         setattr(card, field, getattr(data, field, 0))
     card.extra_work_description = data.extra_work_description
 
-    db.commit()
-    db.refresh(card)
+    await db.commit()
+    await db.refresh(card)
     return {"message": "تم تحديث بطاقة المشارك", "card": card_to_response(card)}
 
 
 @router.delete("/member/{member_id}/card/{card_date}")
-def delete_member_card(
+async def delete_member_card(
     member_id: int,
     card_date: str,
     user: User = Depends(require_supervisor),
     db: Session = Depends(get_db),
 ):
     """Delete a daily card for a member."""
-    _verify_member_access(user, member_id, db)
+    await _verify_member_access(user, member_id, db)
     target_date = date.fromisoformat(card_date)
-    card = db.query(DailyCard).filter_by(user_id=member_id, date=target_date).first()
+    card = await db.query(DailyCard).filter_by(user_id=member_id, date=target_date).first()
     if not card:
         raise HTTPException(404, detail="البطاقة غير موجودة")
     db.delete(card)
-    db.commit()
+    await db.commit()
     return {"message": "تم حذف البطاقة بنجاح"}
 
 
 @router.get("/leaderboard")
-def get_leaderboard(
+async def get_leaderboard(
     halqa_id: int = Query(None),
     user: User = Depends(require_supervisor),
     db: Session = Depends(get_db),
 ):
     """Get leaderboard. Super admin can filter by halqa or see all."""
-    halqa = _resolve_halqa(user, db, halqa_id)
-    members = _get_members(db, halqa)
+    halqa = await _resolve_halqa(user, db, halqa_id)
+    members = await _get_members(db, halqa)
 
     today = date.today()
     elapsed_days = max((min(today, RAMADAN_END) - RAMADAN_START).days + 1, 1)
 
     leaderboard = []
     for m in members:
-        cards = db.query(DailyCard).filter_by(user_id=m.id).all()
+        cards = await db.query(DailyCard).filter_by(user_id=m.id).all()
         total = sum(c.total_score for c in cards)
         max_total = elapsed_days * MAX_PER_DAY
         pct = round((total / max_total) * 100, 1) if max_total > 0 else 0
@@ -213,7 +213,7 @@ def get_leaderboard(
 
 
 @router.get("/daily-summary")
-def get_daily_summary(
+async def get_daily_summary(
     halqa_id: int = Query(None),
     user: User = Depends(require_supervisor),
     db: Session = Depends(get_db),
@@ -223,14 +223,14 @@ def get_daily_summary(
     target_date_str = date_param or date.today().isoformat()
     target_date = date.fromisoformat(target_date_str)
 
-    halqa = _resolve_halqa(user, db, halqa_id)
-    members = _get_members(db, halqa)
+    halqa = await _resolve_halqa(user, db, halqa_id)
+    members = await _get_members(db, halqa)
 
     submitted = []
     not_submitted = []
 
     for member in members:
-        card = db.query(DailyCard).filter_by(user_id=member.id, date=target_date).first()
+        card = await db.query(DailyCard).filter_by(user_id=member.id, date=target_date).first()
         if card:
             submitted.append({
                 "member": user_to_response(member),
@@ -251,7 +251,7 @@ def get_daily_summary(
 
 
 @router.get("/range-summary")
-def get_range_summary(
+async def get_range_summary(
     halqa_id: int = Query(None),
     date_from: str = Query(None),
     date_to: str = Query(None),
@@ -264,12 +264,12 @@ def get_range_summary(
     end = date.fromisoformat(date_to) if date_to else today
     total_days = (end - start).days + 1
 
-    halqa = _resolve_halqa(user, db, halqa_id)
-    members = _get_members(db, halqa)
+    halqa = await _resolve_halqa(user, db, halqa_id)
+    members = await _get_members(db, halqa)
     summary = []
 
     for member in members:
-        cards = db.query(DailyCard).filter(
+        cards = await db.query(DailyCard).filter(
             DailyCard.user_id == member.id,
             DailyCard.date >= start,
             DailyCard.date <= end,
@@ -301,24 +301,24 @@ def get_range_summary(
 
 
 @router.get("/weekly-summary")
-def get_weekly_summary(
+async def get_weekly_summary(
     halqa_id: int = Query(None),
     user: User = Depends(require_supervisor),
     db: Session = Depends(get_db),
 ):
     """Get weekly summary. Super admin can filter by halqa."""
-    halqa = _resolve_halqa(user, db, halqa_id)
+    halqa = await _resolve_halqa(user, db, halqa_id)
 
     today = date.today()
     week_start = today - timedelta(days=today.weekday())
 
-    members = _get_members(db, halqa)
+    members = await _get_members(db, halqa)
     summary = []
 
     week_days = (today - week_start).days + 1
 
     for member in members:
-        cards = db.query(DailyCard).filter(
+        cards = await db.query(DailyCard).filter(
             DailyCard.user_id == member.id,
             DailyCard.date >= week_start,
             DailyCard.date <= today,
@@ -346,7 +346,7 @@ def get_weekly_summary(
 
 
 @router.get("/export")
-def export_cards(
+async def export_cards(
     format: str = Query("xlsx"),
     halqa_id: int = Query(None),
     date_from: str = Query(None),
@@ -364,8 +364,8 @@ def export_cards(
     start = date.fromisoformat(date_from) if date_from else RAMADAN_START
     end = date.fromisoformat(date_to) if date_to else today
 
-    halqa = _resolve_halqa(user, db, halqa_id)
-    members = _get_members(db, halqa)
+    halqa = await _resolve_halqa(user, db, halqa_id)
+    members = await _get_members(db, halqa)
 
     # Apply search filters
     if search_name:
@@ -379,7 +379,7 @@ def export_cards(
     gender_map = {"male": "ذكر", "female": "أنثى"}
     rows = []
     for member in members:
-        cards = db.query(DailyCard).filter(
+        cards = await db.query(DailyCard).filter(
             DailyCard.user_id == member.id,
             DailyCard.date >= start,
             DailyCard.date <= end,

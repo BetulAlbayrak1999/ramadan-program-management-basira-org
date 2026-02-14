@@ -21,31 +21,6 @@ globs = ["**/.git/**", "**/.venv/**", "**/__pycache__/**", "**/*.pyc"]
 fallthrough = true
 
 # Bindings for environment variables
-#[vars]
-# Application Info
-#APP_VERSION = "1.0.0"
-
-# Database - Using D1 binding (configured in [[d1_databases]] section below)
-# D1 provides persistent serverless SQLite database
-# DATABASE_URL is kept for compatibility but D1 binding (env.DB) is used in Workers
-#DATABASE_URL = "sqlite://:memory:"
-
-# These will be accessible via env in your worker
-# Add your non-sensitive config here
-#JWT_ALGORITHM = "HS256"
-#JWT_ACCESS_TOKEN_EXPIRES = "2592000"
-#MAIL_SERVER = "smtp.gmail.com"
-#MAIL_PORT = "587"
-#MAIL_USE_TLS = "true"
-#ENABLE_EMAIL_NOTIFICATIONS = "true"
-
-# Secrets (sensitive data) - set these using: wrangler secret put SECRET_NAME
-# - JWT_SECRET_KEY
-# - MAIL_USERNAME
-# - MAIL_PASSWORD
-# - SUPER_ADMIN_EMAIL
-# - SUPER_ADMIN_PASSWORD
-# - INIT_SECRET (optional, for secure database initialization)
 
 # Cron Triggers for scheduled tasks
 [triggers]

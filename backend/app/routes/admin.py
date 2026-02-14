@@ -29,58 +29,58 @@ require_admin = RoleChecker("super_admin")
 
 
 @router.get("/registrations")
-def get_registrations(
+async def get_registrations(
     status: str = Query("pending"),
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Get all pending registrations."""
     if status == "all":
-        users = db.query(User).order_by(User.created_at.desc()).all()
+        users = await db.query(User).order_by(User.created_at.desc()).all()
     else:
-        users = db.query(User).filter_by(status=status).order_by(User.created_at.desc()).all()
+        users = await db.query(User).filter_by(status=status).order_by(User.created_at.desc()).all()
     return {"users": [user_to_response(u) for u in users]}
 
 
 @router.post("/registration/{user_id}/approve")
-def approve_registration(
+async def approve_registration(
     user_id: int,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Approve a registration request."""
-    user = db.get(User, user_id)
+    user = await db.get(User, user_id)
     if not user:
         raise HTTPException(404, detail="المستخدم غير موجود")
 
     user.status = "active"
     user.rejection_note = None
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return {"message": "تم قبول الطلب", "user": user_to_response(user)}
 
 
 @router.post("/registration/{user_id}/reject")
-def reject_registration(
+async def reject_registration(
     user_id: int,
     data: RejectRegistration = None,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Reject a registration request."""
-    user = db.get(User, user_id)
+    user = await db.get(User, user_id)
     if not user:
         raise HTTPException(404, detail="المستخدم غير موجود")
 
     user.status = "rejected"
     user.rejection_note = data.note if data else ""
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return {"message": "تم رفض الطلب", "user": user_to_response(user)}
 
 
 @router.get("/users")
-def get_all_users(
+async def get_all_users(
     status: str = Query(None),
     gender: str = Query(None),
     halqa_id: int = Query(None),
@@ -105,32 +105,32 @@ def get_all_users(
             )
         )
 
-    users = query.order_by(User.created_at.desc()).all()
+    users = await query.order_by(User.created_at.desc()).all()
     return {"users": [user_to_response(u) for u in users]}
 
 
 @router.get("/user/{user_id}")
-def get_user(
+async def get_user(
     user_id: int,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Get user details."""
-    user = db.get(User, user_id)
+    user = await db.get(User, user_id)
     if not user:
         raise HTTPException(404, detail="المستخدم غير موجود")
     return {"user": user_to_response(user)}
 
 
 @router.put("/user/{user_id}")
-def update_user(
+async def update_user(
     user_id: int,
     data: AdminUserUpdate,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Update user details."""
-    user = db.get(User, user_id)
+    user = await db.get(User, user_id)
     if not user:
         raise HTTPException(404, detail="المستخدم غير موجود")
 
@@ -140,59 +140,59 @@ def update_user(
         if value is not None:
             setattr(user, field, value)
 
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return {"message": "تم تحديث البيانات", "user": user_to_response(user)}
 
 
 @router.post("/user/{user_id}/reset-password")
-def admin_reset_password(
+async def admin_reset_password(
     user_id: int,
     data: AdminResetPassword,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Reset user password by admin."""
-    user = db.get(User, user_id)
+    user = await db.get(User, user_id)
     if not user:
         raise HTTPException(404, detail="المستخدم غير موجود")
 
     user.set_password(data.new_password)
-    db.commit()
+    await db.commit()
     return {"message": "تم إعادة تعيين كلمة المرور"}
 
 
 @router.post("/user/{user_id}/withdraw")
-def withdraw_user(
+async def withdraw_user(
     user_id: int,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Mark user as withdrawn."""
-    user = db.get(User, user_id)
+    user = await db.get(User, user_id)
     if not user:
         raise HTTPException(404, detail="المستخدم غير موجود")
 
     user.status = "withdrawn"
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return {"message": "تم سحب المشارك", "user": user_to_response(user)}
 
 
 @router.post("/user/{user_id}/activate")
-def activate_user(
+async def activate_user(
     user_id: int,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Re-activate user."""
-    user = db.get(User, user_id)
+    user = await db.get(User, user_id)
     if not user:
         raise HTTPException(404, detail="المستخدم غير موجود")
 
     user.status = "active"
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return {"message": "تم تفعيل المشارك", "user": user_to_response(user)}
 
 
@@ -200,14 +200,14 @@ def activate_user(
 
 
 @router.post("/user/{user_id}/set-role")
-def set_user_role(
+async def set_user_role(
     user_id: int,
     data: SetRole,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Set user role (supervisor, super_admin, participant)."""
-    target = db.get(User, user_id)
+    target = await db.get(User, user_id)
     if not target:
         raise HTTPException(404, detail="المستخدم غير موجود")
 
@@ -221,8 +221,8 @@ def set_user_role(
             raise HTTPException(403, detail="فقط المشرف الرئيسي يمكنه إدارة صلاحيات السوبر آدمن")
 
     target.role = data.role
-    db.commit()
-    db.refresh(target)
+    await db.commit()
+    await db.refresh(target)
     return {"message": "تم تحديث الصلاحية", "user": user_to_response(target)}
 
 
@@ -230,17 +230,17 @@ def set_user_role(
 
 
 @router.get("/halqas")
-def get_halqas(
+async def get_halqas(
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Get all halqas."""
-    halqas = db.query(Halqa).all()
+    halqas = await db.query(Halqa).all()
     return {"halqas": [halqa_to_response(h) for h in halqas]}
 
 
 @router.post("/halqa")
-def create_halqa(
+async def create_halqa(
     data: HalqaCreate,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
@@ -250,21 +250,21 @@ def create_halqa(
     if not name:
         raise HTTPException(400, detail="اسم الحلقة مطلوب")
 
-    if db.query(Halqa).filter_by(name=name).first():
+    if await db.query(Halqa).filter_by(name=name).first():
         raise HTTPException(400, detail="اسم الحلقة موجود مسبقاً")
 
     # Remove supervisor from any other halqa they currently supervise
     old_halqa_name = None
     if data.supervisor_id:
-        old_halqa = db.query(Halqa).filter_by(supervisor_id=data.supervisor_id).first()
+        old_halqa = await db.query(Halqa).filter_by(supervisor_id=data.supervisor_id).first()
         if old_halqa:
             old_halqa_name = old_halqa.name
             old_halqa.supervisor_id = None
 
     halqa = Halqa(name=name, supervisor_id=data.supervisor_id)
     db.add(halqa)
-    db.commit()
-    db.refresh(halqa)
+    await db.commit()
+    await db.refresh(halqa)
     msg = "تم إنشاء الحلقة"
     if old_halqa_name:
         msg += f" (تم إزالة المشرف من حلقة «{old_halqa_name}»)"
@@ -272,14 +272,14 @@ def create_halqa(
 
 
 @router.put("/halqa/{halqa_id}")
-def update_halqa(
+async def update_halqa(
     halqa_id: int,
     data: HalqaUpdate,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Update halqa details."""
-    halqa = db.get(Halqa, halqa_id)
+    halqa = await db.get(Halqa, halqa_id)
     if not halqa:
         raise HTTPException(404, detail="الحلقة غير موجودة")
 
@@ -290,7 +290,7 @@ def update_halqa(
     old_halqa_name = None
     if data.supervisor_id is not None:
         if data.supervisor_id and data.supervisor_id != halqa.supervisor_id:
-            old_halqa = db.query(Halqa).filter(
+            old_halqa = await db.query(Halqa).filter(
                 Halqa.supervisor_id == data.supervisor_id, Halqa.id != halqa_id
             ).first()
             if old_halqa:
@@ -298,8 +298,8 @@ def update_halqa(
                 old_halqa.supervisor_id = None
         halqa.supervisor_id = data.supervisor_id
 
-    db.commit()
-    db.refresh(halqa)
+    await db.commit()
+    await db.refresh(halqa)
     msg = "تم تحديث الحلقة"
     if old_halqa_name:
         msg += f" (تم إزالة المشرف من حلقة «{old_halqa_name}»)"
@@ -307,48 +307,48 @@ def update_halqa(
 
 
 @router.post("/halqa/{halqa_id}/assign-members")
-def assign_members_to_halqa(
+async def assign_members_to_halqa(
     halqa_id: int,
     data: AssignMembers,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Assign members to a halqa."""
-    halqa = db.get(Halqa, halqa_id)
+    halqa = await db.get(Halqa, halqa_id)
     if not halqa:
         raise HTTPException(404, detail="الحلقة غير موجودة")
 
     for uid in data.user_ids:
-        user = db.get(User, uid)
+        user = await db.get(User, uid)
         if user:
             user.halqa_id = halqa_id
 
-    db.commit()
+    await db.commit()
     return {"message": "تم تعيين المشاركين"}
 
 
 @router.post("/user/{user_id}/assign-halqa")
-def assign_user_halqa(
+async def assign_user_halqa(
     user_id: int,
     data: AssignHalqa,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Assign a single user to a halqa."""
-    user = db.get(User, user_id)
+    user = await db.get(User, user_id)
     if not user:
         raise HTTPException(404, detail="المستخدم غير موجود")
 
     user.halqa_id = data.halqa_id
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return {"message": "تم تعيين الحلقة", "user": user_to_response(user)}
 
 
 # ─── Analytics Dashboard ──────────────────────────────────────────────────────
 
 
-def _build_analytics_results(
+async def _build_analytics_results(
     db: Session,
     gender: str = None,
     halqa_id: int = None,
@@ -372,14 +372,14 @@ def _build_analytics_results(
     if member:
         query = query.filter(User.full_name.ilike(f"%{member}%"))
     if supervisor:
-        halqas = db.query(Halqa).join(User, Halqa.supervisor_id == User.id).filter(
+        halqas = await db.query(Halqa).join(User, Halqa.supervisor_id == User.id).filter(
             User.full_name.ilike(f"%{supervisor}%")
         ).all()
         halqa_ids = [h.id for h in halqas]
         if halqa_ids:
             query = query.filter(User.halqa_id.in_(halqa_ids))
 
-    users = query.all()
+    users = await query.all()
 
     # Date range
     today = date.today()
@@ -411,7 +411,7 @@ def _build_analytics_results(
         if end_date:
             card_query = card_query.filter(DailyCard.date <= end_date)
 
-        cards = card_query.all()
+        cards = await card_query.all()
         total = sum(c.total_score for c in cards)
         if total_days:
             max_total = total_days * max_per_day
@@ -451,7 +451,7 @@ def _build_analytics_results(
 
 
 @router.get("/analytics")
-def get_analytics(
+async def get_analytics(
     gender: str = Query(None),
     halqa_id: int = Query(None),
     supervisor: str = Query(None),
@@ -467,15 +467,15 @@ def get_analytics(
     db: Session = Depends(get_db),
 ):
     """Get comprehensive analytics."""
-    results = _build_analytics_results(
+    results = await _build_analytics_results(
         db, gender=gender, halqa_id=halqa_id, supervisor=supervisor,
         member=member, min_pct=min_pct, max_pct=max_pct, period=period,
         date_from=date_from, date_to=date_to, sort_by=sort_by, sort_order=sort_order,
     )
 
-    total_active = db.query(User).filter_by(status="active").count()
-    total_pending = db.query(User).filter_by(status="pending").count()
-    total_halqas = db.query(Halqa).count()
+    total_active = await db.query(User).filter_by(status="active").count()
+    total_pending = await db.query(User).filter_by(status="pending").count()
+    total_halqas = await db.query(Halqa).count()
 
     return {
         "results": results,
@@ -489,7 +489,7 @@ def get_analytics(
 
 
 @router.get("/user/{user_id}/cards")
-def get_user_cards(
+async def get_user_cards(
     user_id: int,
     date_from: str = Query(None),
     date_to: str = Query(None),
@@ -497,7 +497,7 @@ def get_user_cards(
     db: Session = Depends(get_db),
 ):
     """Get all daily cards for a specific user, with optional date filtering."""
-    target = db.get(User, user_id)
+    target = await db.get(User, user_id)
     if not target:
         raise HTTPException(404, detail="المستخدم غير موجود")
 
@@ -507,7 +507,7 @@ def get_user_cards(
     if date_to:
         card_query = card_query.filter(DailyCard.date <= date.fromisoformat(date_to))
 
-    cards = card_query.order_by(DailyCard.date.desc()).all()
+    cards = await card_query.order_by(DailyCard.date.desc()).all()
     return {
         "member": user_to_response(target),
         "cards": [card_to_response(c) for c in cards],
@@ -518,7 +518,7 @@ def get_user_cards(
 
 
 @router.get("/export")
-def export_data(
+async def export_data(
     format: str = Query("csv"),
     gender: str = Query(None),
     halqa_id: int = Query(None),
@@ -538,7 +538,7 @@ def export_data(
     import csv
     from openpyxl import Workbook
 
-    results = _build_analytics_results(
+    results = await _build_analytics_results(
         db, gender=gender, halqa_id=halqa_id, supervisor=supervisor,
         member=member, min_pct=min_pct, max_pct=max_pct, period=period,
         date_from=date_from, date_to=date_to, sort_by=sort_by, sort_order=sort_order,
@@ -597,7 +597,7 @@ def export_data(
 
 
 @router.post("/import")
-def import_users(
+async def import_users(
     file: UploadFile = File(...),
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
@@ -615,7 +615,8 @@ def import_users(
         if h not in headers:
             raise HTTPException(400, detail=f"العمود {h} مفقود من الملف")
 
-    max_mid = db.query(func.max(User.member_id)).scalar()
+    last_user = await db.query(User).order_by(User.member_id.desc()).first()
+    max_mid = last_user.member_id if last_user else None
     next_member_id = (max_mid + 1) if max_mid else 1000
 
     imported = 0
@@ -636,7 +637,7 @@ def import_users(
             if email in seen_emails:
                 errors.append(f"صف {row_idx}: بريد مكرر في الملف")
                 continue
-            if db.query(User).filter_by(email=email).first():
+            if await db.query(User).filter_by(email=email).first():
                 errors.append(f"صف {row_idx}: البريد مسجل مسبقاً ({email})")
                 continue
 
@@ -662,14 +663,14 @@ def import_users(
             )
             user.set_password("123456")  # Default password
             db.add(user)
-            db.flush()
+            await db.flush()
             next_member_id += 1
             imported += 1
         except Exception as e:
             db.rollback()
             errors.append(f"صف {row_idx}: {str(e)}")
 
-    db.commit()
+    await db.commit()
     return {
         "message": f"تم استيراد {imported} مشارك في قائمة الانتظار",
         "errors": errors,
@@ -677,7 +678,7 @@ def import_users(
 
 
 @router.get("/import-template")
-def get_import_template(
+async def get_import_template(
     admin: User = Depends(require_admin),
 ):
     """Download import template."""
@@ -717,83 +718,83 @@ class BulkAssignHalqa(BaseModel):
 
 
 @router.post("/bulk/approve")
-def bulk_approve(
+async def bulk_approve(
     data: BulkUserIds,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     count = 0
     for uid in data.user_ids:
-        u = db.get(User, uid)
+        u = await db.get(User, uid)
         if u and u.status == "pending":
             u.status = "active"
             u.rejection_note = None
             count += 1
-    db.commit()
+    await db.commit()
     return {"message": f"تم قبول {count} طلب"}
 
 
 @router.post("/bulk/reject")
-def bulk_reject(
+async def bulk_reject(
     data: BulkUserIds,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     count = 0
     for uid in data.user_ids:
-        u = db.get(User, uid)
+        u = await db.get(User, uid)
         if u and u.status == "pending":
             u.status = "rejected"
             count += 1
-    db.commit()
+    await db.commit()
     return {"message": f"تم رفض {count} طلب"}
 
 
 @router.post("/bulk/activate")
-def bulk_activate(
+async def bulk_activate(
     data: BulkUserIds,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     count = 0
     for uid in data.user_ids:
-        u = db.get(User, uid)
+        u = await db.get(User, uid)
         if u and u.status in ("rejected", "withdrawn"):
             u.status = "active"
             count += 1
-    db.commit()
+    await db.commit()
     return {"message": f"تم تفعيل {count} مشارك"}
 
 
 @router.post("/bulk/withdraw")
-def bulk_withdraw(
+async def bulk_withdraw(
     data: BulkUserIds,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     count = 0
     for uid in data.user_ids:
-        u = db.get(User, uid)
+        u = await db.get(User, uid)
         if u and u.status == "active":
             u.status = "withdrawn"
             count += 1
-    db.commit()
+    await db.commit()
     return {"message": f"تم سحب {count} مشارك"}
 
 
 @router.post("/bulk/assign-halqa")
-def bulk_assign_halqa(
+async def bulk_assign_halqa(
     data: BulkAssignHalqa,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     count = 0
     for uid in data.user_ids:
-        u = db.get(User, uid)
+        u = await db.get(User, uid)
         if u:
             u.halqa_id = data.halqa_id
             count += 1
-    db.commit()
+    await db.commit()
     return {"message": f"تم تعيين الحلقة لـ {count} مشارك"}
 
 
@@ -801,7 +802,7 @@ def bulk_assign_halqa(
 
 
 @router.get("/export-users")
-def export_users(
+async def export_users(
     format: str = Query("xlsx"),
     status: str = Query(None),
     gender: str = Query(None),
@@ -829,7 +830,7 @@ def export_users(
             or_(User.full_name.ilike(f"%{search}%"), User.email.ilike(f"%{search}%"))
         )
 
-    users_list = query.order_by(User.created_at.desc()).all()
+    users_list = await query.order_by(User.created_at.desc()).all()
 
     gender_map = {"male": "ذكر", "female": "أنثى"}
     status_map = {"active": "نشط", "pending": "قيد المراجعة", "rejected": "مرفوض", "withdrawn": "منسحب"}

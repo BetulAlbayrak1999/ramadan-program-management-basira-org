@@ -84,23 +84,26 @@ async def initialize_d1_database() -> Dict:
             )
             """,
             
-            # Daily cards table
+            # Daily cards table (matches SQLAlchemy DailyCard model)
             """
             CREATE TABLE IF NOT EXISTS daily_cards (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date DATE NOT NULL,
                 user_id INTEGER NOT NULL,
-                quran_tilawa INTEGER DEFAULT 0,
-                quran_hifdh INTEGER DEFAULT 0,
-                quran_revision INTEGER DEFAULT 0,
-                hadith INTEGER DEFAULT 0,
-                dua_adhkar INTEGER DEFAULT 0,
-                salah_jamaat INTEGER DEFAULT 0,
-                salah_qiyam INTEGER DEFAULT 0,
-                fasting BOOLEAN DEFAULT FALSE,
-                charity BOOLEAN DEFAULT FALSE,
-                notes TEXT,
-                submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                quran REAL DEFAULT 0,
+                tadabbur REAL DEFAULT 0,
+                duas REAL DEFAULT 0,
+                taraweeh REAL DEFAULT 0,
+                tahajjud REAL DEFAULT 0,
+                duha REAL DEFAULT 0,
+                rawatib REAL DEFAULT 0,
+                main_lesson REAL DEFAULT 0,
+                enrichment_lesson REAL DEFAULT 0,
+                charity_worship REAL DEFAULT 0,
+                extra_work REAL DEFAULT 0,
+                extra_work_description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id),
                 UNIQUE(user_id, date)
             )
@@ -110,7 +113,7 @@ async def initialize_d1_database() -> Dict:
             """
             CREATE TABLE IF NOT EXISTS site_settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                enable_email_notifications BOOLEAN DEFAULT TRUE
+                enable_email_notifications INTEGER DEFAULT 1
             )
             """
         ]
@@ -123,7 +126,7 @@ async def initialize_d1_database() -> Dict:
         # Create default settings (single row matching SQLAlchemy model)
         settings_sql = """
             INSERT INTO site_settings (enable_email_notifications)
-            VALUES (TRUE)
+            VALUES (1)
         """
         
         await db.prepare(settings_sql).run()

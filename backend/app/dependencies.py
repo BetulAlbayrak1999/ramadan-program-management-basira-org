@@ -10,7 +10,7 @@ from app.utils.jwt_hs256 import jwt, JWTError
 security = HTTPBearer(auto_error=False)
 
 
-def get_current_user(
+async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ):
@@ -29,13 +29,13 @@ def get_current_user(
     except JWTError:
         raise HTTPException(status_code=401, detail="التوكن غير صالح أو منتهي الصلاحية")
 
-    user = db.get(User, int(user_id))
+    user = await db.get(User, int(user_id))
     if not user:
         raise HTTPException(status_code=404, detail="المستخدم غير موجود")
     return user
 
 
-def get_active_user(user=Depends(get_current_user)):
+async def get_active_user(user=Depends(get_current_user)):
     """Ensure user is active."""
     if user.status != "active":
         raise HTTPException(status_code=403, detail="الحساب غير مفعل")
@@ -48,7 +48,7 @@ class RoleChecker:
     def __init__(self, *allowed_roles: str):
         self.allowed_roles = allowed_roles
 
-    def __call__(self, user=Depends(get_current_user)):
+    async def __call__(self, user=Depends(get_current_user)):
         if user.status != "active" and user.role != "super_admin":
             raise HTTPException(status_code=403, detail="الحساب غير مفعل")
         if user.role not in self.allowed_roles:

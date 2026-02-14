@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/participant", tags=["participant"])
 
 
 @router.post("/card")
-def save_card(
+async def save_card(
     data: DailyCardCreate,
     user: User = Depends(get_active_user),
     db: Session = Depends(get_db),
@@ -25,7 +25,7 @@ def save_card(
     if data.date < RAMADAN_START or data.date > RAMADAN_END:
         raise HTTPException(400, detail="لا يمكن إدخال بطاقة خارج فترة البرنامج الرمضاني (19 فبراير - 19 مارس)")
 
-    existing = db.query(DailyCard).filter_by(user_id=user.id, date=data.date).first()
+    existing = await db.query(DailyCard).filter_by(user_id=user.id, date=data.date).first()
     if existing:
         raise HTTPException(400, detail="تم إدخال بطاقة هذا اليوم مسبقاً ولا يمكن تعديلها")
 
@@ -35,19 +35,19 @@ def save_card(
     card.extra_work_description = data.extra_work_description
 
     db.add(card)
-    db.commit()
-    db.refresh(card)
+    await db.commit()
+    await db.refresh(card)
     return {"message": "تم حفظ البطاقة", "card": card_to_response(card)}
 
 
 @router.get("/card/{card_date}")
-def get_card(
+async def get_card(
     card_date: str,
     user: User = Depends(get_active_user),
     db: Session = Depends(get_db),
 ):
     """Get daily card for a specific date."""
-    card = db.query(DailyCard).filter_by(
+    card = await db.query(DailyCard).filter_by(
         user_id=user.id, date=date.fromisoformat(card_date)
     ).first()
 
@@ -57,7 +57,7 @@ def get_card(
 
 
 @router.get("/cards")
-def get_all_cards(
+async def get_all_cards(
     date_from: str = Query(None),
     date_to: str = Query(None),
     user: User = Depends(get_active_user),
@@ -69,12 +69,12 @@ def get_all_cards(
         query = query.filter(DailyCard.date >= date.fromisoformat(date_from))
     if date_to:
         query = query.filter(DailyCard.date <= date.fromisoformat(date_to))
-    cards = query.order_by(DailyCard.date.desc()).all()
+    cards = await query.order_by(DailyCard.date.desc()).all()
     return {"cards": [card_to_response(c) for c in cards]}
 
 
 @router.get("/stats")
-def get_stats(
+async def get_stats(
     user: User = Depends(get_active_user),
     db: Session = Depends(get_db),
 ):
@@ -82,18 +82,18 @@ def get_stats(
     today = date.today()
 
     # Today's card
-    today_card = db.query(DailyCard).filter_by(user_id=user.id, date=today).first()
+    today_card = await db.query(DailyCard).filter_by(user_id=user.id, date=today).first()
     today_percentage = today_card.percentage if today_card else 0
 
     # Overall stats
-    all_cards = db.query(DailyCard).filter_by(user_id=user.id).all()
+    all_cards = await db.query(DailyCard).filter_by(user_id=user.id).all()
     overall_total = sum(c.total_score for c in all_cards)
     overall_max = sum(c.max_score for c in all_cards) if all_cards else 0
     overall_percentage = round((overall_total / overall_max) * 100, 1) if overall_max > 0 else 0
 
     # Supervisor info
     supervisor_info = None
-    if user.halqa and user.halqa.supervisor:
+    if hasattr(user, 'halqa') and user.halqa and hasattr(user.halqa, 'supervisor') and user.halqa.supervisor:
         sup = user.halqa.supervisor
         supervisor_info = {
             "full_name": sup.full_name,
@@ -109,5 +109,3 @@ def get_stats(
         "cards_count": len(all_cards),
         "supervisor": supervisor_info,
     }
-
-

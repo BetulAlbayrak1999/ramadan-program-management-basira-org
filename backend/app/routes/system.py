@@ -112,11 +112,18 @@ async def initialize_database_endpoint(
                 raise HTTPException(status_code=401, detail="Invalid token")
             
             # Check user role
-            db = next(get_db())
+            from app.d1_adapter import is_d1_available, get_d1_binding, D1Session
+            from app.models.user import User
+
+            if is_d1_available():
+                db = D1Session(get_d1_binding())
+            else:
+                from app.database import get_session_local
+                db = get_session_local()()
+
             try:
-                from app.models.user import User
-                user = db.get(User, int(user_id))
-                
+                user = await db.get(User, int(user_id))
+
                 if not user or user.role != "super_admin":
                     raise HTTPException(
                         status_code=403,
