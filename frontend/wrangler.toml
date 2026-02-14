@@ -1,0 +1,11 @@
+name = "ramadan-platform-frontend"
+compatibility_date = "2024-01-01"
+
+# Pages configuration for React app
+pages_build_output_dir = "build"
+
+# NOTE: Environment variables for React build (like REACT_APP_*)
+# must be set in Cloudflare Pages Dashboard:
+# Pages > Your Project > Settings > Environment variables
+#
+# Add: REACT_APP_API_URL = https://ramadan-program-backend.it-basirah.workers.dev/api

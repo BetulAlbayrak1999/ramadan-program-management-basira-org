@@ -405,6 +405,50 @@ ramadan-program-management-basira/
 
 ---
 
+## Deployment Options
+
+### Option 1: Traditional Server (PostgreSQL)
+
+Standard deployment with PostgreSQL database on any server:
+
+1. **Set up PostgreSQL database**
+2. **Configure environment variables** (`.env`)
+3. **Run with Uvicorn:**
+   ```bash
+   cd backend
+   uvicorn main:app --host 0.0.0.0 --port 8000
+   ```
+4. **Database initialization** happens automatically on startup
+5. **Deploy frontend** to static hosting (Vercel, Netlify, etc.)
+
+### Option 2: Cloudflare Workers (Serverless)
+
+Serverless deployment with D1 database on Cloudflare Workers:
+
+1. **Follow the complete guide:** [`backend/CLOUDFLARE_DEPLOYMENT.md`](backend/CLOUDFLARE_DEPLOYMENT.md)
+2. **Set Cloudflare secrets:** `wrangler secret put SECRET_KEY`, etc.
+3. **Deploy with pywrangler:**
+   ```bash
+   cd backend
+   uv run pywrangler deploy
+   ```
+4. **Initialize database:** Call `/system/initialize-database` endpoint
+5. **Deploy frontend** to Cloudflare Pages
+
+**Key Documentation:**
+- 📘 [Cloudflare Deployment Guide](backend/CLOUDFLARE_DEPLOYMENT.md)
+- 📋 [Deployment Checklist](backend/DEPLOYMENT_CHECKLIST.md)
+- 📝 [Changes Summary](backend/CHANGES_SUMMARY.md)
+
+**Benefits of Cloudflare Workers:**
+- ✅ Serverless - No server management
+- ✅ Global edge network
+- ✅ Automatic scaling
+- ✅ Cost effective for low-medium traffic
+- ✅ Built-in DDoS protection
+
+---
+
 ## Ramadan Period
 
 The application is configured for **Ramadan 2026**:

@@ -37,3 +37,4 @@ Thumbs.db
 # Database
 *.db
 *.sqlite3
+backend/python_modules

@@ -1,0 +1,67 @@
+name = "ramadan-program-backend"
+main = "worker.py"
+compatibility_flags = ["python_workers"]
+compatibility_date = "2024-01-01"
+# Exclude documentation and metadata
+[[rules]]
+type = "Text"
+globs = ["**/*.md", "**/*.txt", "**/*.rst"]
+fallthrough = true
+
+# Exclude test files
+[[rules]]
+type = "Text"
+globs = ["**/tests/**", "**/*_test.py", "**/test_*.py"]
+fallthrough = true
+
+# Exclude development files
+[[rules]]
+type = "Text"
+globs = ["**/.git/**", "**/.venv/**", "**/__pycache__/**", "**/*.pyc"]
+fallthrough = true
+
+# Bindings for environment variables
+#[vars]
+# Application Info
+#APP_VERSION = "1.0.0"
+
+# Database - Using D1 binding (configured in [[d1_databases]] section below)
+# D1 provides persistent serverless SQLite database
+# DATABASE_URL is kept for compatibility but D1 binding (env.DB) is used in Workers
+#DATABASE_URL = "sqlite://:memory:"
+
+# These will be accessible via env in your worker
+# Add your non-sensitive config here
+#JWT_ALGORITHM = "HS256"
+#JWT_ACCESS_TOKEN_EXPIRES = "2592000"
+#MAIL_SERVER = "smtp.gmail.com"
+#MAIL_PORT = "587"
+#MAIL_USE_TLS = "true"
+#ENABLE_EMAIL_NOTIFICATIONS = "true"
+
+# Secrets (sensitive data) - set these using: wrangler secret put SECRET_NAME
+# - JWT_SECRET_KEY
+# - MAIL_USERNAME
+# - MAIL_PASSWORD
+# - SUPER_ADMIN_EMAIL
+# - SUPER_ADMIN_PASSWORD
+# - INIT_SECRET (optional, for secure database initialization)
+
+# Cron Triggers for scheduled tasks
+[triggers]
+# Auto-initialize database: Runs EVERY MINUTE to catch new deployments
+# Once DB is initialized, subsequent runs just confirm health (fast check)
+# Change to "0 0 * * *" (daily) after DB is stable
+crons = ["* * * * *"]
+
+# D1 Database binding (Cloudflare's SQLite-based database)
+[[d1_databases]]
+binding = "DB"
+database_name = "ramadan-db"
+database_id = "2c984382-7aeb-49d3-8119-9b2cad25524d"
+
+# For Workers AI (if needed)
+# [ai]
+# binding = "AI"
+
+

@@ -15,7 +15,10 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build"
+    "build": "react-scripts build",
+    "deploy": "npm run build && wrangler pages deploy build",
+    "deploy:production": "npm run build && wrangler pages deploy build --branch=master",
+    "deploy:staging": "npm run build && wrangler pages deploy build --branch=dev"
   },
   "browserslist": {
     "production": [

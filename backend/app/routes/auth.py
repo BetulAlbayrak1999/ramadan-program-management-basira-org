@@ -63,33 +63,61 @@ def register(data: UserRegister, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-def login(data: UserLogin, db: Session = Depends(get_db)):
+async def login(data: UserLogin, db: Session = Depends(get_db)):
     """Login with email and password."""
-    email = data.email.lower().strip()
-    user = db.query(User).filter_by(email=email).first()
+    try:
+        print(f"Login attempt for: {data.email}")
+        
+        email = data.email.lower().strip()
+        print(f"Querying user with email: {email}")
+        
+        user = await db.query(User).filter_by(email=email).first()
+        
+        print(f"User found: {user is not None}")
+        
+        if not user:
+            raise HTTPException(401, detail="بيانات الدخول غير صحيحة")
+        
+        print(f"Checking password...")
+        if not user.check_password(data.password):
+            raise HTTPException(401, detail="بيانات الدخول غير صحيحة")
+        
+        print(f"Password correct, checking admin status...")
 
-    if not user or not user.check_password(data.password):
-        raise HTTPException(401, detail="بيانات الدخول غير صحيحة")
+        # Check if user is primary super admin - auto-promote before status checks
+        is_primary_admin = email == app_settings.SUPER_ADMIN_EMAIL.lower()
+        if is_primary_admin and (user.role != "super_admin" or user.status != "active"):
+            print(f"Promoting user to super_admin and activating...")
+            user.role = "super_admin"
+            user.status = "active"
+            await db.commit()
+        
+        print(f"User status: {user.status}")
 
-    # Check if user is primary super admin - auto-promote before status checks
-    is_primary_admin = email == app_settings.SUPER_ADMIN_EMAIL.lower()
-    if is_primary_admin and (user.role != "super_admin" or user.status != "active"):
-        user.role = "super_admin"
-        user.status = "active"
-        db.commit()
+        if user.status == "pending":
+            raise HTTPException(403, detail="طلبك قيد المراجعة. يرجى انتظار الموافقة.")
 
-    if user.status == "pending":
-        raise HTTPException(403, detail="طلبك قيد المراجعة. يرجى انتظار الموافقة.")
+        if user.status == "rejected":
+            note = user.rejection_note or ""
+            raise HTTPException(403, detail=f"تم رفض طلبك. {note}")
 
-    if user.status == "rejected":
-        note = user.rejection_note or ""
-        raise HTTPException(403, detail=f"تم رفض طلبك. {note}")
+        if user.status == "withdrawn":
+            raise HTTPException(403, detail="حسابك منسحب. تواصل مع الإدارة.")
 
-    if user.status == "withdrawn":
-        raise HTTPException(403, detail="حسابك منسحب. تواصل مع الإدارة.")
-
-    token = create_access_token(user.id)
-    return {"token": token, "user": user_to_response(user)}
+        print(f"Creating access token for user {user.id}")
+        token = create_access_token(user.id)
+        
+        print(f"Login successful for user {user.id}")
+        return {"token": token, "user": user_to_response(user)}
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        print(f"ERROR in login: {type(e).__name__}: {str(e)}")
+        import traceback
+        print(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
+        raise HTTPException(500, detail=f"Login failed: {str(e)}")
 
 
 @router.get("/me")

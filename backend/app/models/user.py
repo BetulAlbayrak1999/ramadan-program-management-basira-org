@@ -1,8 +1,9 @@
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from passlib.hash import bcrypt as bcrypt_hash
 from app.database import Base
+# Use lightweight password hashing instead of passlib/bcrypt
+from app.utils.password_hash import bcrypt_hash
 
 
 class User(Base):

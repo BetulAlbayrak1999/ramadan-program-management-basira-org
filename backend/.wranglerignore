@@ -1,0 +1,101 @@
+# Wrangler Ignore - Files and directories to exclude from deployment bundle
+
+# Virtual environments (most important - these are huge)
+.venv/
+.venv-workers/
+venv/
+env/
+ENV/
+python_modules/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+.wrangler/
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Documentation (not needed in production)
+*.md
+*.rst
+*.txt
+LICENSE
+CHANGES
+AUTHORS
+CONTRIBUTING
+README
+docs/
+documentation/
+
+# Development and testing
+tests/
+test_*.py
+*_test.py
+.pytest_cache/
+.coverage
+.tox/
+.nox/
+htmlcov/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Package management
+uv.lock
+poetry.lock
+Pipfile.lock
+requirements-dev.txt
+
+# Alembic migrations (not needed in Workers - we use initialization.py)
+alembic/
+alembic.ini
+
+# Deployment guides (keep these in git but not in bundle)
+DEPLOYMENT_CHECKLIST.md
+CLOUDFLARE_DEPLOYMENT.md
+CHANGES_SUMMARY.md
+SETUP_COMPLETE.md
+BUNDLE_SIZE_OPTIONS.md
+
+# Backup and temporary files
+*.bak
+*.tmp
+*.temp
+*.old
+.backup/
+.venv/
+.venv-workers/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.dist-info/
+**/*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.git/

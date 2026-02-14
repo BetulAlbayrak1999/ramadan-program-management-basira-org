@@ -1,5 +1,50 @@
+# Environment and secrets
 .env
+.env.local
+.env.*.local
+
+# Python
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
 .venv/
 venv/
+env/
+ENV/
+
+# Dependencies
+pyhton_modules/**
+uv.lock
+
+# Wrangler/Cloudflare
+deploy-*
+deploy/
+.wrangler/
+dist/
+worker-bundle/
+
+# Alembic (remove wrongly created directory)
+app/alembic/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3

@@ -1,5 +1,6 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
+from app.utils.email_validator import validate_email
 
 
 # --- Request Schemas ---
@@ -10,16 +11,26 @@ class UserRegister(BaseModel):
     gender: str
     age: int
     phone: str
-    email: EmailStr
+    email: str
     password: str = Field(min_length=6)
     confirm_password: str
     country: str
     referral_source: str = ""
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email_format(cls, v):
+        return validate_email(v)
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str
     password: str
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email_format(cls, v):
+        return validate_email(v)
 
 
 class UserProfileUpdate(BaseModel):
@@ -36,13 +47,23 @@ class ChangePassword(BaseModel):
 
 
 class ForgotPassword(BaseModel):
-    email: EmailStr
+    email: str
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email_format(cls, v):
+        return validate_email(v)
 
 
 class ResetPassword(BaseModel):
-    email: EmailStr
+    email: str
     token: str
     new_password: str = Field(min_length=6)
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email_format(cls, v):
+        return validate_email(v)
 
 
 class AdminResetPassword(BaseModel):
@@ -77,10 +98,21 @@ class RejectRegistration(BaseModel):
 
 def user_to_response(user) -> dict:
     """Build user response dict matching the frontend expected format."""
+    
+    # Helper to convert datetime/string to ISO format
+    def to_iso(dt):
+        if dt is None:
+            return None
+        if isinstance(dt, str):
+            return dt  # Already a string, return as-is
+        if hasattr(dt, 'isoformat'):
+            return dt.isoformat()  # datetime object
+        return str(dt)  # Fallback
+    
     data = {
         "id": user.id,
         "member_id": user.member_id,
-        "full_name": user.full_name,
+        "full_name": user.full_name if hasattr(user, 'full_name') else user.name,
         "gender": user.gender,
         "age": user.age,
         "phone": user.phone,
@@ -89,15 +121,18 @@ def user_to_response(user) -> dict:
         "referral_source": user.referral_source,
         "status": user.status,
         "role": user.role,
-        "rejection_note": user.rejection_note,
+        "rejection_note": user.rejection_note if hasattr(user, 'rejection_note') else None,
         "halqa_id": user.halqa_id,
-        "halqa_name": user.halqa.name if user.halqa else None,
-        "created_at": user.created_at.isoformat() if user.created_at else None,
-        "updated_at": user.updated_at.isoformat() if user.updated_at else None,
+        "halqa_name": user.halqa.name if hasattr(user, 'halqa') and user.halqa else None,
+        "created_at": to_iso(getattr(user, 'created_at', None)),
+        "updated_at": to_iso(getattr(user, 'updated_at', None)),
     }
-    if user.supervised_halqa:
+    
+    if hasattr(user, 'supervised_halqa') and user.supervised_halqa:
         data["supervised_halqa_name"] = user.supervised_halqa.name
-    if user.halqa and user.halqa.supervisor:
-        data["supervisor_name"] = user.halqa.supervisor.full_name
+    
+    if hasattr(user, 'halqa') and user.halqa and hasattr(user.halqa, 'supervisor') and user.halqa.supervisor:
+        data["supervisor_name"] = user.halqa.supervisor.full_name if hasattr(user.halqa.supervisor, 'full_name') else user.halqa.supervisor.name
         data["supervisor_phone"] = user.halqa.supervisor.phone
+    
     return data

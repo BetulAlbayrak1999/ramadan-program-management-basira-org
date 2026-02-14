@@ -1,0 +1,40 @@
+[project]
+name = "ramadan-program-backend"
+version = "0.1.0"
+description = "Ramadan Program Management API for Cloudflare Workers"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "sqlalchemy>=2.0.35",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.5.0",
+    "httpx>=0.27.0",
+    "python-multipart>=0.0.12",
+    "openpyxl>=3.1.2",
+]
+# These packages ARE in Pyodide, but must be declared for pywrangler bundling
+# The benefit: Pyodide uses optimized pre-compiled versions (smaller & faster)
+# 
+# Removed heavy dependencies (now using stdlib replacements):
+# - python-jose[cryptography] → app/utils/jwt_hs256.py (stdlib only)
+# - passlib[bcrypt] + bcrypt → app/utils/password_hash.py (stdlib pbkdf2_hmac)
+# - python-dotenv → not needed in Workers (uses env bindings)
+
+[dependency-groups]
+dev = [
+    "workers-py"
+]
+
+[tool.pywrangler]
+# Configure pywrangler to minimize build artifacts
+exclude = [
+    ".venv",
+    ".venv-workers",
+    "__pycache__",
+    "*.pyc",
+    ".git",
+    "tests",
+    "docs",
+    "*.md",
+    "alembic",
+]

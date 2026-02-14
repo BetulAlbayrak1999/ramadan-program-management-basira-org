@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
+# Use lightweight JWT implementation instead of python-jose
+from app.utils.jwt_hs256 import jwt, JWTError
 
 security = HTTPBearer(auto_error=False)
 
@@ -58,5 +59,6 @@ class RoleChecker:
 def create_access_token(user_id: int) -> str:
     """Create a JWT access token."""
     expire = datetime.now(timezone.utc) + timedelta(seconds=settings.JWT_ACCESS_TOKEN_EXPIRES)
-    payload = {"sub": str(user_id), "exp": expire}
+    # Convert datetime to Unix timestamp (int) for JSON serialization
+    payload = {"sub": str(user_id), "exp": int(expire.timestamp())}
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
