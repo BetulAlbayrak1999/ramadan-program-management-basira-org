@@ -6,6 +6,10 @@ services:
     container_name: ramadan_postgres
     restart: unless-stopped
     
+    # Load environment variables from .env file
+    env_file:
+      - .env
+    
     environment:
       # PostgreSQL Admin User (superuser)
       POSTGRES_USER: postgres                                    # Admin/superuser

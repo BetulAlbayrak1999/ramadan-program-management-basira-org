@@ -8,6 +8,10 @@ services:
     container_name: ramadan_app
     restart: unless-stopped
     
+    # Load environment variables from .env file
+    env_file:
+      - .env
+    
     environment:
       # Database connection - uses application user (ramadan_app), NOT admin user
       # Format: postgresql://username:password@host:port/database
