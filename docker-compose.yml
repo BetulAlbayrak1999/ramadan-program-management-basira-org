@@ -15,7 +15,7 @@ services:
     environment:
       # Database connection - uses application user (ramadan_app), NOT admin user
       # Format: postgresql://username:password@host:port/database
-      DATABASE_URL: postgresql://ramadan_app:${APP_USER_PASSWORD}@postgres:5432/${POSTGRES_DB:-ramadan_db}
+      DATABASE_URL:  ${DATABASE_URL}
       
       # JWT Configuration
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
