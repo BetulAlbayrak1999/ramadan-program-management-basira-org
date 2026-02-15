@@ -11,16 +11,10 @@ from fastapi.staticfiles import StaticFiles
 import os
 import logging
 from pathlib import Path
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Initialize rate limiter
-limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
     title="Ramadan Program Management API",
@@ -29,9 +23,6 @@ app = FastAPI(
     redoc_url=None,
     openapi_url=None
 )
-
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Security Headers Middleware
 @app.middleware("http")
