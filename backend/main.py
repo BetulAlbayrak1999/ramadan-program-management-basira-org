@@ -1,29 +1,72 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy import text, inspect
 from app.database import engine, Base, SessionLocal
 from app.routes import all_routers
-from app.models import User, DailyCard, Halqa, SiteSettings
+from app.models import User, DailyCard, Halqa, SiteSettings  
 from app.config import settings as app_settings
 from fastapi.staticfiles import StaticFiles
 import os
 import logging
 from pathlib import Path
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Ramadan Program Management API")
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
 
-# CORS
+app = FastAPI(
+    title="Ramadan Program Management API",
+    # Disable docs in production for security
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None
+)
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    return response
+
+# CORS - Restricted to your domain
+allowed_origins = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    # Production domain
+    "https://basira.info",
+    "https://www.basira.info",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=["*"],
+    max_age=3600,
+)
+
+# Trusted Host Middleware (prevents host header attacks)
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["localhost", "127.0.0.1", "basira.info", "*.basira.info"]
 )
 
 
@@ -116,6 +159,18 @@ if frontend_build.exists():
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         """Serve frontend application (must be LAST route!)"""
+        # Block common bot/scanner paths with 404 (don't waste resources serving index.html)
+        bot_paths = [
+            "wp-", "wordpress", "wp/", "blog/", "phpmyadmin", "admin/",
+            "xmlrpc", "wp-content", "wp-includes", ".php", ".asp", ".aspx",
+            ".env", ".git", "config", ".xml",  "sitemap", "feed/", "trackback",
+            "wlwmanifest.xml", "license.txt", "readme.html"
+        ]
+        
+        if any(pattern in full_path.lower() for pattern in bot_paths):
+            logger.warning(f"🚫 Blocked bot/scanner path: {full_path}")
+            raise HTTPException(status_code=404, detail="Not found")
+        
         # Don't intercept API routes
         if full_path.startswith("api/") or full_path.startswith("health") or full_path.startswith("docs") or full_path.startswith("redoc") or full_path.startswith("openapi.json"):
             raise HTTPException(status_code=404, detail="API endpoint not found")
@@ -131,15 +186,15 @@ if frontend_build.exists():
         if file_path.exists() and file_path.is_file():
             return FileResponse(file_path)
         
-        # SPA fallback - serve index.html for all other routes
-        index_file = frontend_build / "index.html"
-        if index_file.exists():
-            return FileResponse(index_file)
+        # SPA fallback - only serve index.html for legitimate frontend routes
+        # Valid frontend routes typically don't have file extensions
+        if "." not in full_path:
+            index_file = frontend_build / "index.html"
+            if index_file.exists():
+                return FileResponse(index_file)
         
-        return JSONResponse(
-            status_code=404,
-            content={"message": "Frontend not built. Run 'npm run build' in the frontend directory."}
-        )
+        # Everything else gets 404
+        raise HTTPException(status_code=404, detail="Not found")
 else:
     logger.warning(f"⚠️  Frontend build folder not found at {frontend_build}. Frontend will not be served.")
     logger.info("To build the frontend, run: cd frontend && npm install && npm run build")
