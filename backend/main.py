@@ -8,6 +8,12 @@ from app.models import User, DailyCard, Halqa, SiteSettings
 from app.config import settings as app_settings
 from fastapi.staticfiles import StaticFiles
 import os
+import logging
+from pathlib import Path
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Ramadan Program Management API")
 
@@ -98,23 +104,45 @@ def on_startup():
     finally:
         db.close()
 
-# Mount static files for frontend (if exists)
-static_dir = os.path.join(os.path.dirname(__file__), "static")
-if os.path.exists(static_dir):
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-
-
-# Serve React frontend for all other routes (SPA catch-all)
-@app.get("/{full_path:path}")
-async def serve_frontend(full_path: str):
-    """Serve React app for all non-API routes."""
-    # index.html is at /app/index.html (root of app directory)
-    index_path = os.path.join(os.path.dirname(__file__), "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    # If no frontend built, return 404
-    raise HTTPException(status_code=404, detail="Frontend not found")
+# Mount static files for frontend (React build output)
+frontend_build = Path(__file__).parent / "frontend" / "build"
+if frontend_build.exists():
+    logger.info(f"✅ Mounting frontend from {frontend_build}")
+    
+    # Mount static directory for JS/CSS files
+    app.mount("/static", StaticFiles(directory=frontend_build / "static"), name="static")
+    
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """Serve frontend application (must be LAST route!)"""
+        # Don't intercept API routes
+        if full_path.startswith("api/") or full_path.startswith("health") or full_path.startswith("docs") or full_path.startswith("redoc") or full_path.startswith("openapi.json"):
+            raise HTTPException(status_code=404, detail="API endpoint not found")
+        
+        # Serve root
+        if full_path == "" or full_path == "/":
+            index_file = frontend_build / "index.html"
+            if index_file.exists():
+                return FileResponse(index_file)
+        
+        # Try to serve the file if it exists
+        file_path = frontend_build / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+        
+        # SPA fallback - serve index.html for all other routes
+        index_file = frontend_build / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file)
+        
+        return JSONResponse(
+            status_code=404,
+            content={"message": "Frontend not built. Run 'npm run build' in the frontend directory."}
+        )
+else:
+    logger.warning(f"⚠️  Frontend build folder not found at {frontend_build}. Frontend will not be served.")
+    logger.info("To build the frontend, run: cd frontend && npm install && npm run build")
 
 
 
