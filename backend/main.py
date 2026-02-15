@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse, FileResponse
@@ -36,6 +37,25 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
     return response
 
+
+@app.middleware("http")
+async def log_error_responses(request: Request, call_next):
+    response = await call_next(request)
+    if response.status_code >= 400:
+        client_host = request.client.host if request.client else "-"
+        query = f"?{request.url.query}" if request.url.query else ""
+        user_agent = request.headers.get("user-agent", "-")
+        logger.warning(
+            "HTTP %s %s%s -> %s (client=%s ua=%s)",
+            request.method,
+            request.url.path,
+            query,
+            response.status_code,
+            client_host,
+            user_agent,
+        )
+    return response
+
 # CORS - Restricted to your domain
 allowed_origins = [
     "http://localhost:8000",
@@ -67,6 +87,21 @@ async def custom_http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
         content={"error": exc.detail, "detail": exc.detail},
+    )
+
+
+# Log and return validation errors (422) with details
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.warning(
+        "Validation error on %s %s: %s",
+        request.method,
+        request.url.path,
+        exc.errors(),
+    )
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"error": "Validation error", "detail": exc.errors()},
     )
 
 
