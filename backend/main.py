@@ -1,11 +1,13 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy import text, inspect
 from app.database import engine, Base, SessionLocal
 from app.routes import all_routers
 from app.models import User, DailyCard, Halqa, SiteSettings
 from app.config import settings as app_settings
+from fastapi.staticfiles import StaticFiles
+import os
 
 app = FastAPI(title="Ramadan Program Management API")
 
@@ -96,7 +98,40 @@ def on_startup():
     finally:
         db.close()
 
+# Mount static files for frontend (if exists)
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+
+# Serve React frontend for all other routes (SPA catch-all)
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    """Serve React app for all non-API routes."""
+    index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    # If no frontend built, return 404
+    raise HTTPException(status_code=404, detail="Frontend not found")
+
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        reload=False,
+        reload_excludes=[
+            "*/.git/*",
+            "*/__pycache__/*",
+            "*.pyc",
+            "*/.pytest_cache/*",
+            "*/.vscode/*",
+            "*/.idea/*"
+        ],
+        reload_delay=1,
+        reload_includes=["*.py", "*.html", "*.css", "*.js"]
+    )

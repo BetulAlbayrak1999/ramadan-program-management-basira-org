@@ -1,0 +1,58 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+backend/.venv/
+backend/.venv-workers/
+backend/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+backend/**/*.pyd
+backend/.Python
+backend/**/*.egg-info
+backend/python_modules/
+
+# Node
+frontend/node_modules/
+frontend/build/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+*.env.local
+
+# Logs
+*.log
+*.logs
+
+# DevOps
+devops/
+
+# Documentation
+*.md
+README.md
+
+# Scripts
+backend/deploy*.sh
+backend/wrangler.*
+backend/vercel.json
+
+# Backups
+*.sql
+backup_*
