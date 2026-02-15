@@ -109,7 +109,8 @@ if os.path.exists(static_dir):
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):
     """Serve React app for all non-API routes."""
-    index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
+    # index.html is at /app/index.html (root of app directory)
+    index_path = os.path.join(os.path.dirname(__file__), "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
     # If no frontend built, return 404

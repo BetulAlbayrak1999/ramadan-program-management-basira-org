@@ -32,8 +32,10 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 # Copy backend code
 COPY backend/ ./
 
-# Copy frontend build
-COPY --from=frontend-builder /frontend/build ./static
+# Copy frontend build to root of /app (not /app/static)
+# React build structure: build/index.html, build/static/js/..., build/static/css/...
+# After copy: /app/index.html, /app/static/js/..., /app/static/css/...
+COPY --from=frontend-builder /frontend/build ./
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser && \
