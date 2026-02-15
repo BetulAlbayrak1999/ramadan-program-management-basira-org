@@ -34,11 +34,28 @@ def _convert_js_to_py(obj):
 
 def _parse_sqlalchemy_condition(condition):
     """
-    Parse a SQLAlchemy BinaryExpression/clause into (field, op, value) tuples
-    or a raw SQL fragment dict.
+    Parse a SQLAlchemy BinaryExpression/clause into filter tuples.
+    Returns list of tuples: ('param', field, op, value) or ('in', field, values) or ('or', sub_filters)
     """
-    # Handle SQLAlchemy BinaryExpression objects
+    # Handle or_() / BooleanClauseList
+    type_name = type(condition).__name__
+    if type_name == 'BooleanClauseList' or (hasattr(condition, 'clauses') and hasattr(condition, 'operator')):
+        # Check if this is an OR clause
+        op = getattr(condition, 'operator', None)
+        op_name = getattr(op, '__name__', '') if op else ''
+        if op_name == 'or_' or 'or' in str(op).lower():
+            sub_filters = []
+            for clause in condition.clauses:
+                parsed = _parse_sqlalchemy_condition(clause)
+                sub_filters.extend(parsed)
+            if sub_filters:
+                return [('or', sub_filters)]
+
+    # Handle ilike() - it's a BinaryExpression with 'ilike' operator
     if hasattr(condition, 'left') and hasattr(condition, 'right'):
+        op_obj = getattr(condition, 'operator', None)
+        op_name = getattr(op_obj, '__name__', '') if op_obj else ''
+
         # Get field name from left side
         left = condition.left
         field = None
@@ -46,18 +63,37 @@ def _parse_sqlalchemy_condition(condition):
             field = left.key
         elif hasattr(left, 'name'):
             field = left.name
-
         if field is None:
-            # Fallback to string parsing
             left_str = str(left)
-            field = left_str.split('.')[-1]
+            field = left_str.split('.')[-1].strip()
 
-        # Get operator
-        op_obj = condition.operator
-        op_name = op_obj.__name__ if hasattr(op_obj, '__name__') else str(op_obj)
+        # Handle ilike specifically
+        if op_name == 'ilike_op' or 'ilike' in op_name.lower() or 'LIKE' in str(condition).upper():
+            right = condition.right
+            value = None
+            if hasattr(right, 'effective_value'):
+                value = right.effective_value
+            elif hasattr(right, 'value'):
+                value = right.value
+            if value is not None:
+                # SQLite LIKE is case-insensitive for ASCII by default
+                return [('param', field, 'LIKE', value)]
 
-        # Get value from right side
+        # Handle in_() operator
+        if op_name == 'in_op' or 'in_op' in op_name.lower():
+            right = condition.right
+            values = []
+            if hasattr(right, 'clauses'):
+                for clause in right.clauses:
+                    if hasattr(clause, 'effective_value'):
+                        values.append(clause.effective_value)
+                    elif hasattr(clause, 'value'):
+                        values.append(clause.value)
+            return [('in', field, values)]
+
+        # Handle standard comparison operators
         right = condition.right
+        value = None
         if hasattr(right, 'effective_value'):
             value = right.effective_value
         elif hasattr(right, 'value'):
@@ -71,7 +107,6 @@ def _parse_sqlalchemy_condition(condition):
         elif isinstance(value, datetime):
             value = value.isoformat()
 
-        # Map SQLAlchemy operator names to SQL operators
         op_map = {
             'eq': '=',
             'ne': '!=',
@@ -79,32 +114,14 @@ def _parse_sqlalchemy_condition(condition):
             'le': '<=',
             'gt': '>',
             'ge': '>=',
+            'is_': 'IS',
+            'is_not': 'IS NOT',
         }
 
         sql_op = op_map.get(op_name, '=')
         return [('param', field, sql_op, value)]
 
-    # Handle ilike (case-insensitive LIKE)
-    if hasattr(condition, 'clauses') or 'ilike' in str(type(condition)).lower():
-        cond_str = str(condition)
-        # Try to extract from compiled form
-        if 'LIKE' in cond_str.upper():
-            # Parse "table.field LIKE :value" style
-            parts = cond_str.upper().split('LIKE')
-            if len(parts) == 2:
-                field = parts[0].strip().split('.')[-1].strip().lower()
-                # The value is bound, try to extract it
-                if hasattr(condition, 'right') and hasattr(condition.right, 'value'):
-                    value = condition.right.value
-                elif hasattr(condition, 'right') and hasattr(condition.right, 'effective_value'):
-                    value = condition.right.effective_value
-                else:
-                    # Fallback: extract from string
-                    val_part = parts[1].strip().strip("'\"").replace(':' + field + '_1', '%')
-                    value = val_part
-                return [('param', field, 'LIKE', value)]
-
-    # Handle in_() clauses
+    # Handle in_() as a standalone clause
     if hasattr(condition, 'clauses') and 'IN' in str(condition).upper():
         cond_str = str(condition)
         field_part = cond_str.split(' IN ')[0] if ' IN ' in cond_str.upper() else ''
@@ -120,18 +137,13 @@ def _parse_sqlalchemy_condition(condition):
 
     # Fallback: parse from string representation
     condition_str = str(condition)
-
-    # Try comparison operators in order of specificity
     for op_str, sql_op in [('>=', '>='), ('<=', '<='), ('!=', '!='), ('==', '='), ('>', '>'), ('<', '<')]:
         if op_str in condition_str:
             parts = condition_str.split(op_str, 1)
             if len(parts) == 2:
                 field = parts[0].strip().split('.')[-1].strip()
                 raw_val = parts[1].strip().strip("'\"")
-                # Try to parse as a bound parameter
                 if raw_val.startswith(':'):
-                    # It's a bound parameter, we can't extract the value this way
-                    # but this shouldn't happen with our usage patterns
                     continue
                 return [('param', field, sql_op, raw_val)]
 
@@ -163,6 +175,10 @@ class D1Query:
         for condition in conditions:
             parsed = _parse_sqlalchemy_condition(condition)
             self._filters.extend(parsed)
+        return self
+
+    def join(self, *args, **kwargs):
+        """No-op join for D1. Joins are not supported; use separate queries instead."""
         return self
 
     def order_by(self, *columns):
@@ -237,21 +253,39 @@ class D1Query:
 
             # Add WHERE clauses
             params = []
+
+            def _build_filter(f):
+                """Build a single filter clause and append params."""
+                if f[0] == 'param':
+                    _, field, op, value = f
+                    params.append(value)
+                    return f"{field} {op} ?"
+                elif f[0] == 'in':
+                    _, field, values = f
+                    if values:
+                        placeholders = ', '.join(['?'] * len(values))
+                        params.extend(values)
+                        return f"{field} IN ({placeholders})"
+                    else:
+                        return "1 = 0"
+                elif f[0] == 'or':
+                    _, sub_filters = f
+                    or_clauses = []
+                    for sf in sub_filters:
+                        clause = _build_filter(sf)
+                        if clause:
+                            or_clauses.append(clause)
+                    if or_clauses:
+                        return "(" + " OR ".join(or_clauses) + ")"
+                    return None
+                return None
+
             if self._filters:
                 where_clauses = []
                 for f in self._filters:
-                    if f[0] == 'param':
-                        _, field, op, value = f
-                        where_clauses.append(f"{field} {op} ?")
-                        params.append(value)
-                    elif f[0] == 'in':
-                        _, field, values = f
-                        if values:
-                            placeholders = ', '.join(['?'] * len(values))
-                            where_clauses.append(f"{field} IN ({placeholders})")
-                            params.extend(values)
-                        else:
-                            where_clauses.append("1 = 0")  # Empty IN -> no results
+                    clause = _build_filter(f)
+                    if clause:
+                        where_clauses.append(clause)
                 if where_clauses:
                     query += " WHERE " + " AND ".join(where_clauses)
 
@@ -323,29 +357,46 @@ class D1Query:
         try:
             obj = self.model_class()
 
+            # Mark as D1 instance to prevent SQLAlchemy lazy-loading
+            object.__setattr__(obj, '_sa_instance_state', getattr(obj, '_sa_instance_state', None))
+
+            # Set relationship attributes to None in __dict__ to prevent lazy-loading errors
+            # This bypasses SQLAlchemy's instrumented attribute descriptors
+            from sqlalchemy.orm import RelationshipProperty
+            mapper = None
+            try:
+                from sqlalchemy import inspect as sa_inspect
+                mapper = sa_inspect(self.model_class)
+            except Exception:
+                pass
+
+            if mapper:
+                for rel in mapper.relationships:
+                    obj.__dict__[rel.key] = [] if rel.uselist else None
+
             row = _convert_js_to_py(row)
 
             if isinstance(row, dict):
                 for key, value in row.items():
                     if key == 'name' and 'full_name' not in row:
-                        setattr(obj, 'full_name', value)
+                        obj.__dict__['full_name'] = value
                     else:
-                        setattr(obj, key, value)
+                        obj.__dict__[key] = value
             elif hasattr(row, '__dict__'):
                 for key, value in row.__dict__.items():
                     if not key.startswith('_'):
                         if key == 'name' and hasattr(obj, 'full_name'):
-                            setattr(obj, 'full_name', value)
+                            obj.__dict__['full_name'] = value
                         else:
-                            setattr(obj, key, value)
+                            obj.__dict__[key] = value
             else:
                 for key in dir(row):
                     if not key.startswith('_') and not callable(getattr(row, key, None)):
                         value = getattr(row, key, None)
                         if key == 'name' and hasattr(obj, 'full_name'):
-                            setattr(obj, 'full_name', value)
+                            obj.__dict__['full_name'] = value
                         else:
-                            setattr(obj, key, value)
+                            obj.__dict__[key] = value
 
             return obj
 
@@ -383,19 +434,19 @@ class D1Session:
         result = _convert_js_to_py(result)
         if not result:
             return None
-        # Build model from row
-        obj = model_class()
-        if isinstance(result, dict):
-            for key, value in result.items():
-                if key == 'name' and 'full_name' not in result:
-                    setattr(obj, 'full_name', value)
-                else:
-                    setattr(obj, key, value)
-        return obj
+        # Build model from row using D1Query's _row_to_model for consistency
+        dummy_query = D1Query(self, model_class)
+        return dummy_query._row_to_model(result)
 
     def add(self, obj):
         """Add an object to be inserted on commit."""
         self._pending_adds.append(obj)
+
+    def merge(self, obj):
+        """Mark an object for update on commit (SQLAlchemy compatibility)."""
+        if obj not in self._pending_updates:
+            self._pending_updates.append(obj)
+        return obj
 
     def delete(self, obj):
         """Mark an object for deletion on commit."""
@@ -526,34 +577,58 @@ class D1Session:
 
     async def _update_object(self, obj):
         """Update an object in the database."""
-        table_name = obj.__tablename__
-        obj_id = getattr(obj, 'id', None)
+        try:
+            table_name = obj.__tablename__
+            obj_id = getattr(obj, 'id', None)
 
-        if obj_id is None:
-            return
+            if obj_id is None:
+                print(f"WARNING: Trying to update object without ID: {obj}")
+                return
 
-        set_clauses = []
-        values = []
+            # Get list of actual database columns for this model
+            column_names = set()
+            if hasattr(obj, '__table__'):
+                column_names = {col.name for col in obj.__table__.columns}
 
-        for key, value in obj.__dict__.items():
-            if key.startswith('_') or key == 'id':
-                continue
-            if hasattr(value, '__tablename__') or isinstance(value, list):
-                continue
-            if isinstance(value, date):
-                value = value.isoformat()
-            elif isinstance(value, datetime):
-                value = value.isoformat()
-            set_clauses.append(f"{key} = ?")
-            values.append(value)
+            set_clauses = []
+            values = []
 
-        if not set_clauses:
-            return
+            for key, value in obj.__dict__.items():
+                if key.startswith('_') or key == 'id':
+                    continue
+                # Skip relationship objects - only include actual database columns
+                if hasattr(value, '__tablename__') or isinstance(value, list):
+                    continue
+                # If we have column info, only include actual columns
+                if column_names and key not in column_names:
+                    continue
 
-        values.append(obj_id)
+                # Handle None values - use NULL literal instead of binding
+                if value is None:
+                    set_clauses.append(f"{key} = NULL")
+                else:
+                    if isinstance(value, date):
+                        value = value.isoformat()
+                    elif isinstance(value, datetime):
+                        value = value.isoformat()
+                    set_clauses.append(f"{key} = ?")
+                    values.append(value)
 
-        query = f"UPDATE {table_name} SET {', '.join(set_clauses)} WHERE id = ?"
-        await self.db.prepare(query).bind(*values).run()
+            if not set_clauses:
+                print(f"WARNING: No fields to update for {table_name} id={obj_id}")
+                return
+
+            values.append(obj_id)
+
+            query = f"UPDATE {table_name} SET {', '.join(set_clauses)} WHERE id = ?"
+            print(f"DEBUG: Executing update query: {query} with {len(values)} values")
+            await self.db.prepare(query).bind(*values).run()
+            print(f"DEBUG: Successfully updated {table_name} id={obj_id}")
+        except Exception as e:
+            print(f"ERROR in _update_object: {type(e).__name__}: {str(e)}")
+            import traceback
+            print(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
+            raise
 
     async def _delete_object(self, obj):
         """Delete an object from the database."""

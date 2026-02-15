@@ -20,7 +20,7 @@ from sqlalchemy import func
 from app.schemas.halqa import HalqaCreate, HalqaUpdate, AssignMembers, halqa_to_response
 from app.schemas.daily_card import card_to_response
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+router = APIRouter(prefix="/admin", tags=["admin"])
 
 require_admin = RoleChecker("super_admin")
 
@@ -39,6 +39,19 @@ async def get_registrations(
         users = await db.query(User).order_by(User.created_at.desc()).all()
     else:
         users = await db.query(User).filter_by(status=status).order_by(User.created_at.desc()).all()
+
+    # Load halqa for each user (D1 doesn't support eager loading)
+    for user in users:
+        if user.halqa_id:
+            user.halqa = await db.get(Halqa, user.halqa_id)
+            if user.halqa:
+                if user.halqa.supervisor_id:
+                    user.halqa.supervisor = await db.get(User, user.halqa.supervisor_id)
+                else:
+                    user.halqa.supervisor = None
+        else:
+            user.halqa = None
+
     return {"users": [user_to_response(u) for u in users]}
 
 
@@ -55,8 +68,19 @@ async def approve_registration(
 
     user.status = "active"
     user.rejection_note = None
+    db.merge(user)  # Mark for update
     await db.commit()
     await db.refresh(user)
+
+    # Load halqa for response
+    if user.halqa_id:
+        user.halqa = await db.get(Halqa, user.halqa_id)
+        if user.halqa:
+            if user.halqa.supervisor_id:
+                user.halqa.supervisor = await db.get(User, user.halqa.supervisor_id)
+            else:
+                user.halqa.supervisor = None
+
     return {"message": "تم قبول الطلب", "user": user_to_response(user)}
 
 
@@ -74,8 +98,19 @@ async def reject_registration(
 
     user.status = "rejected"
     user.rejection_note = data.note if data else ""
+    db.merge(user)  # Mark for update
     await db.commit()
     await db.refresh(user)
+
+    # Load halqa for response
+    if user.halqa_id:
+        user.halqa = await db.get(Halqa, user.halqa_id)
+        if user.halqa:
+            if user.halqa.supervisor_id:
+                user.halqa.supervisor = await db.get(User, user.halqa.supervisor_id)
+            else:
+                user.halqa.supervisor = None
+
     return {"message": "تم رفض الطلب", "user": user_to_response(user)}
 
 
@@ -89,24 +124,69 @@ async def get_all_users(
     db: Session = Depends(get_db),
 ):
     """Get all users with optional filters."""
-    query = db.query(User)
+    try:
+        print(f"DEBUG get_all_users: Starting with filters - status={status}, gender={gender}, halqa_id={halqa_id}, search={search}")
+        query = db.query(User)
 
-    if status:
-        query = query.filter_by(status=status)
-    if gender:
-        query = query.filter_by(gender=gender)
-    if halqa_id:
-        query = query.filter_by(halqa_id=halqa_id)
-    if search:
-        query = query.filter(
-            or_(
-                User.full_name.ilike(f"%{search}%"),
-                User.email.ilike(f"%{search}%"),
+        if status:
+            query = query.filter_by(status=status)
+        if gender:
+            query = query.filter_by(gender=gender)
+        if halqa_id:
+            query = query.filter_by(halqa_id=halqa_id)
+        if search:
+            query = query.filter(
+                or_(
+                    User.full_name.ilike(f"%{search}%"),
+                    User.email.ilike(f"%{search}%"),
+                )
             )
-        )
 
-    users = await query.order_by(User.created_at.desc()).all()
-    return {"users": [user_to_response(u) for u in users]}
+        print("DEBUG get_all_users: Executing query")
+        users = await query.order_by(User.created_at.desc()).all()
+        print(f"DEBUG get_all_users: Found {len(users)} users")
+
+        # Load halqa for each user (D1 doesn't support eager loading)
+        for idx, user in enumerate(users):
+            try:
+                print(f"DEBUG get_all_users: Processing user {idx+1}/{len(users)}, id={user.id}, halqa_id={user.halqa_id}")
+                if user.halqa_id:
+                    user.halqa = await db.get(Halqa, user.halqa_id)
+                    if user.halqa:
+                        if user.halqa.supervisor_id:
+                            user.halqa.supervisor = await db.get(User, user.halqa.supervisor_id)
+                        else:
+                            user.halqa.supervisor = None
+                    else:
+                        print(f"WARNING: User {user.id} has halqa_id={user.halqa_id} but halqa not found")
+                else:
+                    user.halqa = None
+            except Exception as e:
+                print(f"ERROR loading halqa for user {user.id}: {type(e).__name__}: {str(e)}")
+                import traceback
+                print(f"Traceback: {''.join(traceback.format_tb(e.__traceback__))}")
+                # Set halqa to None to continue processing other users
+                user.halqa = None
+
+        print("DEBUG get_all_users: Building response")
+        result = {"users": [user_to_response(u) for u in users]}
+        print(f"DEBUG get_all_users: Response built successfully with {len(result['users'])} users")
+        return result
+    except Exception as e:
+        import traceback
+        error_detail = f"{type(e).__name__}: {str(e)}"
+        traceback_str = ''.join(traceback.format_tb(e.__traceback__))
+        print(f"ERROR in get_all_users: {error_detail}")
+        print(f"Traceback: {traceback_str}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": error_detail,
+                "type": type(e).__name__,
+                "message": str(e),
+                "traceback": traceback_str
+            }
+        )
 
 
 @router.get("/user/{user_id}")
@@ -119,6 +199,14 @@ async def get_user(
     user = await db.get(User, user_id)
     if not user:
         raise HTTPException(404, detail="المستخدم غير موجود")
+
+    # Load halqa for response
+    if user.halqa_id:
+        user.halqa = await db.get(Halqa, user.halqa_id)
+        # Load supervisor if halqa has one
+        if user.halqa and user.halqa.supervisor_id:
+            user.halqa.supervisor = await db.get(User, user.halqa.supervisor_id)
+
     return {"user": user_to_response(user)}
 
 
@@ -140,8 +228,16 @@ async def update_user(
         if value is not None:
             setattr(user, field, value)
 
+    db.merge(user)  # Mark for update
     await db.commit()
     await db.refresh(user)
+
+    # Load halqa for response
+    if user.halqa_id:
+        user.halqa = await db.get(Halqa, user.halqa_id)
+        if user.halqa and user.halqa.supervisor_id:
+            user.halqa.supervisor = await db.get(User, user.halqa.supervisor_id)
+
     return {"message": "تم تحديث البيانات", "user": user_to_response(user)}
 
 
@@ -158,6 +254,7 @@ async def admin_reset_password(
         raise HTTPException(404, detail="المستخدم غير موجود")
 
     user.set_password(data.new_password)
+    db.merge(user)  # Mark for update
     await db.commit()
     return {"message": "تم إعادة تعيين كلمة المرور"}
 
@@ -174,8 +271,19 @@ async def withdraw_user(
         raise HTTPException(404, detail="المستخدم غير موجود")
 
     user.status = "withdrawn"
+    db.merge(user)  # Mark for update
     await db.commit()
     await db.refresh(user)
+
+    # Load halqa for response
+    if user.halqa_id:
+        user.halqa = await db.get(Halqa, user.halqa_id)
+        if user.halqa:
+            if user.halqa.supervisor_id:
+                user.halqa.supervisor = await db.get(User, user.halqa.supervisor_id)
+            else:
+                user.halqa.supervisor = None
+
     return {"message": "تم سحب المشارك", "user": user_to_response(user)}
 
 
@@ -191,8 +299,19 @@ async def activate_user(
         raise HTTPException(404, detail="المستخدم غير موجود")
 
     user.status = "active"
+    db.merge(user)  # Mark for update
     await db.commit()
     await db.refresh(user)
+
+    # Load halqa for response
+    if user.halqa_id:
+        user.halqa = await db.get(Halqa, user.halqa_id)
+        if user.halqa:
+            if user.halqa.supervisor_id:
+                user.halqa.supervisor = await db.get(User, user.halqa.supervisor_id)
+            else:
+                user.halqa.supervisor = None
+
     return {"message": "تم تفعيل المشارك", "user": user_to_response(user)}
 
 
@@ -221,8 +340,19 @@ async def set_user_role(
             raise HTTPException(403, detail="فقط المشرف الرئيسي يمكنه إدارة صلاحيات السوبر آدمن")
 
     target.role = data.role
+    db.merge(target)  # Mark for update
     await db.commit()
     await db.refresh(target)
+
+    # Load halqa for response
+    if target.halqa_id:
+        target.halqa = await db.get(Halqa, target.halqa_id)
+        if target.halqa:
+            if target.halqa.supervisor_id:
+                target.halqa.supervisor = await db.get(User, target.halqa.supervisor_id)
+            else:
+                target.halqa.supervisor = None
+
     return {"message": "تم تحديث الصلاحية", "user": user_to_response(target)}
 
 
@@ -235,8 +365,48 @@ async def get_halqas(
     db: Session = Depends(get_db),
 ):
     """Get all halqas."""
-    halqas = await db.query(Halqa).all()
-    return {"halqas": [halqa_to_response(h) for h in halqas]}
+    try:
+        print("DEBUG get_halqas: Starting to query halqas")
+        halqas = await db.query(Halqa).all()
+        print(f"DEBUG get_halqas: Found {len(halqas)} halqas")
+
+        # Manually load supervisors and members for each halqa (D1 doesn't support eager loading)
+        halqa_members_map = {}
+        for idx, halqa in enumerate(halqas):
+            print(f"DEBUG get_halqas: Processing halqa {idx+1}/{len(halqas)}, id={halqa.id}")
+            print(f"DEBUG get_halqas: halqa.name = {halqa.name!r}, halqa.supervisor_id = {halqa.supervisor_id}")
+            print(f"DEBUG get_halqas: halqa.__dict__ = {halqa.__dict__}")
+
+            if halqa.supervisor_id:
+                halqa.supervisor = await db.get(User, halqa.supervisor_id)
+            else:
+                halqa.supervisor = None
+
+            # Load members for this halqa and store in map
+            print(f"DEBUG get_halqas: Loading members for halqa id={halqa.id}")
+            members = await db.query(User).filter_by(halqa_id=halqa.id).all()
+            halqa_members_map[halqa.id] = members
+            print(f"DEBUG get_halqas: Loaded {len(members)} members for halqa id={halqa.id}")
+
+        print("DEBUG get_halqas: Building response")
+        response = {"halqas": [halqa_to_response(h, halqa_members_map.get(h.id, [])) for h in halqas]}
+        print("DEBUG get_halqas: Response built successfully")
+        return response
+    except Exception as e:
+        import traceback
+        error_detail = f"{type(e).__name__}: {str(e)}"
+        traceback_str = ''.join(traceback.format_tb(e.__traceback__))
+        print(f"ERROR in get_halqas: {error_detail}")
+        print(f"Traceback: {traceback_str}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": error_detail,
+                "type": type(e).__name__,
+                "message": str(e),
+                "traceback": traceback_str
+            }
+        )
 
 
 @router.post("/halqa")
@@ -260,15 +430,22 @@ async def create_halqa(
         if old_halqa:
             old_halqa_name = old_halqa.name
             old_halqa.supervisor_id = None
+            db.merge(old_halqa)  # Mark for update
 
     halqa = Halqa(name=name, supervisor_id=data.supervisor_id)
     db.add(halqa)
     await db.commit()
     await db.refresh(halqa)
+
+    # Load supervisor and members for response
+    if halqa.supervisor_id:
+        halqa.supervisor = await db.get(User, halqa.supervisor_id)
+    members = await db.query(User).filter_by(halqa_id=halqa.id).all()
+
     msg = "تم إنشاء الحلقة"
     if old_halqa_name:
         msg += f" (تم إزالة المشرف من حلقة «{old_halqa_name}»)"
-    return {"message": msg, "halqa": halqa_to_response(halqa)}
+    return {"message": msg, "halqa": halqa_to_response(halqa, members)}
 
 
 @router.put("/halqa/{halqa_id}")
@@ -279,31 +456,73 @@ async def update_halqa(
     db: Session = Depends(get_db),
 ):
     """Update halqa details."""
-    halqa = await db.get(Halqa, halqa_id)
-    if not halqa:
-        raise HTTPException(404, detail="الحلقة غير موجودة")
+    try:
+        print(f"DEBUG update_halqa: Starting update for halqa_id={halqa_id}")
+        print(f"DEBUG update_halqa: data.name={data.name!r}, data.supervisor_id={data.supervisor_id}")
 
-    if data.name is not None:
-        halqa.name = data.name
+        halqa = await db.get(Halqa, halqa_id)
+        if not halqa:
+            raise HTTPException(404, detail="الحلقة غير موجودة")
 
-    # Remove supervisor from any other halqa they currently supervise
-    old_halqa_name = None
-    if data.supervisor_id is not None:
-        if data.supervisor_id and data.supervisor_id != halqa.supervisor_id:
-            old_halqa = await db.query(Halqa).filter(
-                Halqa.supervisor_id == data.supervisor_id, Halqa.id != halqa_id
-            ).first()
-            if old_halqa:
-                old_halqa_name = old_halqa.name
-                old_halqa.supervisor_id = None
-        halqa.supervisor_id = data.supervisor_id
+        print(f"DEBUG update_halqa: Current halqa.name={halqa.name!r}, halqa.supervisor_id={halqa.supervisor_id}")
 
-    await db.commit()
-    await db.refresh(halqa)
-    msg = "تم تحديث الحلقة"
-    if old_halqa_name:
-        msg += f" (تم إزالة المشرف من حلقة «{old_halqa_name}»)"
-    return {"message": msg, "halqa": halqa_to_response(halqa)}
+        if data.name is not None:
+            # Validate name is not empty
+            name = data.name.strip() if data.name else ""
+            print(f"DEBUG update_halqa: Stripped name={name!r}")
+            if not name:
+                raise HTTPException(400, detail="اسم الحلقة مطلوب")
+            print(f"DEBUG update_halqa: Setting halqa.name from {halqa.name!r} to {name!r}")
+            halqa.name = name
+
+        # Remove supervisor from any other halqa they currently supervise
+        old_halqa_name = None
+        if data.supervisor_id is not None:
+            print(f"DEBUG update_halqa: Updating supervisor from {halqa.supervisor_id} to {data.supervisor_id}")
+            if data.supervisor_id and data.supervisor_id != halqa.supervisor_id:
+                old_halqa = await db.query(Halqa).filter(
+                    Halqa.supervisor_id == data.supervisor_id, Halqa.id != halqa_id
+                ).first()
+                if old_halqa:
+                    old_halqa_name = old_halqa.name
+                    old_halqa.supervisor_id = None
+                    db.merge(old_halqa)  # Mark for update
+            halqa.supervisor_id = data.supervisor_id
+
+        print(f"DEBUG update_halqa: About to merge halqa with name={halqa.name!r}")
+        db.merge(halqa)  # Mark for update
+        print("DEBUG update_halqa: About to commit")
+        await db.commit()
+        print("DEBUG update_halqa: Commit successful, about to refresh")
+        await db.refresh(halqa)
+        print(f"DEBUG update_halqa: After refresh, halqa.name={halqa.name!r}")
+
+        # Load supervisor and members for response
+        if halqa.supervisor_id:
+            halqa.supervisor = await db.get(User, halqa.supervisor_id)
+        members = await db.query(User).filter_by(halqa_id=halqa.id).all()
+
+        msg = "تم تحديث الحلقة"
+        if old_halqa_name:
+            msg += f" (تم إزالة المشرف من حلقة «{old_halqa_name}»)"
+
+        print(f"DEBUG update_halqa: Returning response with halqa.name={halqa.name!r}")
+        return {"message": msg, "halqa": halqa_to_response(halqa, members)}
+    except Exception as e:
+        import traceback
+        error_detail = f"{type(e).__name__}: {str(e)}"
+        traceback_str = ''.join(traceback.format_tb(e.__traceback__))
+        print(f"ERROR in update_halqa: {error_detail}")
+        print(f"Traceback: {traceback_str}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": error_detail,
+                "type": type(e).__name__,
+                "message": str(e),
+                "traceback": traceback_str
+            }
+        )
 
 
 @router.post("/halqa/{halqa_id}/assign-members")
@@ -322,6 +541,7 @@ async def assign_members_to_halqa(
         user = await db.get(User, uid)
         if user:
             user.halqa_id = halqa_id
+            db.merge(user)  # Mark for update
 
     await db.commit()
     return {"message": "تم تعيين المشاركين"}
@@ -340,8 +560,16 @@ async def assign_user_halqa(
         raise HTTPException(404, detail="المستخدم غير موجود")
 
     user.halqa_id = data.halqa_id
+    db.merge(user)  # Mark for update
     await db.commit()
     await db.refresh(user)
+
+    # Load halqa for response
+    if user.halqa_id:
+        user.halqa = await db.get(Halqa, user.halqa_id)
+        if user.halqa and user.halqa.supervisor_id:
+            user.halqa.supervisor = await db.get(User, user.halqa.supervisor_id)
+
     return {"message": "تم تعيين الحلقة", "user": user_to_response(user)}
 
 
@@ -380,6 +608,13 @@ async def _build_analytics_results(
             query = query.filter(User.halqa_id.in_(halqa_ids))
 
     users = await query.all()
+
+    # Load halqa and supervisor for each user (D1 doesn't support eager loading)
+    for u in users:
+        if u.halqa_id:
+            u.halqa = await db.get(Halqa, u.halqa_id)
+            if u.halqa and u.halqa.supervisor_id:
+                u.halqa.supervisor = await db.get(User, u.halqa.supervisor_id)
 
     # Date range
     today = date.today()
@@ -500,6 +735,12 @@ async def get_user_cards(
     target = await db.get(User, user_id)
     if not target:
         raise HTTPException(404, detail="المستخدم غير موجود")
+
+    # Load halqa for response
+    if target.halqa_id:
+        target.halqa = await db.get(Halqa, target.halqa_id)
+        if target.halqa and target.halqa.supervisor_id:
+            target.halqa.supervisor = await db.get(User, target.halqa.supervisor_id)
 
     card_query = db.query(DailyCard).filter_by(user_id=user_id)
     if date_from:
@@ -723,15 +964,42 @@ async def bulk_approve(
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    count = 0
-    for uid in data.user_ids:
-        u = await db.get(User, uid)
-        if u and u.status == "pending":
-            u.status = "active"
-            u.rejection_note = None
-            count += 1
-    await db.commit()
-    return {"message": f"تم قبول {count} طلب"}
+    try:
+        count = 0
+        print(f"DEBUG bulk_approve: Starting with {len(data.user_ids)} user_ids")
+        for uid in data.user_ids:
+            print(f"DEBUG bulk_approve: Processing user_id={uid}")
+            u = await db.get(User, uid)
+            if u:
+                print(f"DEBUG bulk_approve: Found user {uid}, status={u.status}")
+                if u.status == "pending":
+                    u.status = "active"
+                    u.rejection_note = None
+                    db.merge(u)  # Mark for update
+                    print(f"DEBUG bulk_approve: Merged user {uid} to active")
+                    count += 1
+            else:
+                print(f"DEBUG bulk_approve: User {uid} not found")
+        print(f"DEBUG bulk_approve: About to commit {count} updates")
+        await db.commit()
+        print(f"DEBUG bulk_approve: Commit successful")
+        return {"message": f"تم قبول {count} طلب"}
+    except Exception as e:
+        import traceback
+        error_detail = f"{type(e).__name__}: {str(e)}"
+        traceback_str = ''.join(traceback.format_tb(e.__traceback__))
+        print(f"ERROR in bulk_approve: {error_detail}")
+        print(f"Traceback: {traceback_str}")
+        # Return detailed error for debugging
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": error_detail,
+                "type": type(e).__name__,
+                "message": str(e),
+                "traceback": traceback_str
+            }
+        )
 
 
 @router.post("/bulk/reject")
@@ -745,6 +1013,7 @@ async def bulk_reject(
         u = await db.get(User, uid)
         if u and u.status == "pending":
             u.status = "rejected"
+            db.merge(u)  # Mark for update
             count += 1
     await db.commit()
     return {"message": f"تم رفض {count} طلب"}
@@ -761,6 +1030,7 @@ async def bulk_activate(
         u = await db.get(User, uid)
         if u and u.status in ("rejected", "withdrawn"):
             u.status = "active"
+            db.merge(u)  # Mark for update
             count += 1
     await db.commit()
     return {"message": f"تم تفعيل {count} مشارك"}
@@ -777,6 +1047,7 @@ async def bulk_withdraw(
         u = await db.get(User, uid)
         if u and u.status == "active":
             u.status = "withdrawn"
+            db.merge(u)  # Mark for update
             count += 1
     await db.commit()
     return {"message": f"تم سحب {count} مشارك"}
@@ -793,9 +1064,10 @@ async def bulk_assign_halqa(
         u = await db.get(User, uid)
         if u:
             u.halqa_id = data.halqa_id
+            db.merge(u)  # Mark for update
             count += 1
     await db.commit()
-    return {"message": f"تم تعيين الحلقة لـ {count} مشارك"}
+    return {"message": f"تم تعيين الحلقة لـ {count} م��ارك"}
 
 
 # ─── Users Export ─────────────────────────────────────────────────────────────
@@ -831,6 +1103,13 @@ async def export_users(
         )
 
     users_list = await query.order_by(User.created_at.desc()).all()
+
+    # Load halqa and supervisor for each user (D1 doesn't support eager loading)
+    for u in users_list:
+        if u.halqa_id:
+            u.halqa = await db.get(Halqa, u.halqa_id)
+            if u.halqa and u.halqa.supervisor_id:
+                u.halqa.supervisor = await db.get(User, u.halqa.supervisor_id)
 
     gender_map = {"male": "ذكر", "female": "أنثى"}
     status_map = {"active": "نشط", "pending": "قيد المراجعة", "rejected": "مرفوض", "withdrawn": "منسحب"}

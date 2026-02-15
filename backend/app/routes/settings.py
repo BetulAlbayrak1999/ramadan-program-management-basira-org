@@ -6,7 +6,7 @@ from app.models.site_settings import SiteSettings
 from app.dependencies import RoleChecker
 from app.schemas.settings import SettingsUpdate
 
-router = APIRouter(prefix="/api/settings", tags=["settings"])
+router = APIRouter(prefix="/settings", tags=["settings"])
 
 require_admin = RoleChecker("super_admin")
 
@@ -33,6 +33,7 @@ async def update_settings(
         db.add(site)
     else:
         site.enable_email_notifications = data.enable_email_notifications
+        db.merge(site)  # Mark for update
 
     await db.commit()
     await db.refresh(site)

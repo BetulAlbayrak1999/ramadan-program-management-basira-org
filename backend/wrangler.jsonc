@@ -1,57 +1,69 @@
 {
-  "name": "ramadan-program-backend",
-  "main": "worker.py",
-  "compatibility_date": "2024-01-01",
-  "compatibility_flags": ["python_workers"],
-  "observability": {
-    "logs": {
-      "enabled": true,
-      "invocation_logs": true
-    }
-  },
-  // Environment variables
-
-
-  // Cron triggers
-  "triggers": {
-    "crons": ["0 0 1 1 *"]
-  },
-
-  // D1 Database binding
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "ramadan-db",
-      "database_id": "2c984382-7aeb-49d3-8119-9b2cad25524d"
-    }
-  ],
-
-  // IMPORTANT: This is the correct way to shrink python worker deployments
-  "python_modules": {
-    "excludes": [
-      "**/.venv/**",
-      "**/.venv-workers/**",
-      "**/.git/**",
-
-      "**/__pycache__/**",
-      "**/*.pyc",
-      "**/*.pyo",
-
-      "**/tests/**",
-      "**/*_test.py",
-      "**/test_*.py",
-
-      "**/*.md",
-      "**/*.rst",
-      "**/*.txt",
-
-      // Removes huge metadata folders
-      "**/*.dist-info/**",
-      "**/*.egg-info/**",
-
-      // Often huge but not needed in production
-      "**/docs/**",
-      "**/examples/**"
-    ]
-  }
+	"name": "ramadan-program-backend",
+	"main": "worker.py",
+	"compatibility_date": "2024-01-01",
+	"compatibility_flags": [
+		"python_workers"
+	],
+	"observability": {
+		"logs": {
+			"enabled": true,
+			"invocation_logs": true
+		}
+	},
+	// Environment variables
+	// Cron triggers
+	"triggers": {
+		"crons": [
+			"0 0 1 1 *"
+		]
+	},
+	// D1 Database binding
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "ramadan-db",
+			"database_id": "2c984382-7aeb-49d3-8119-9b2cad25524d"
+		}
+	],
+	// IMPORTANT: This is the correct way to shrink python worker deployments
+	"python_modules": {
+		"excludes": [
+			"**/.venv/**",
+			"**/.venv-workers/**",
+			"**/.git/**",
+			"**/__pycache__/**",
+			"**/*.pyc",
+			"**/*.pyo",
+			"**/tests/**",
+			"**/*_test.py",
+			"**/test_*.py",
+			"**/*.md",
+			"**/*.rst",
+			"**/*.txt",
+			// Removes huge metadata folders
+			"**/*.dist-info/**",
+			"**/*.egg-info/**",
+			// Often huge but not needed in production
+			"**/docs/**",
+			"**/examples/**"
+		]
+	},
+	"vars": {
+		"APP_NAME": "Ramadan Program Management API",
+		"APP_VERSION": "1.0.1",
+		"DATABASE_URL": "sqlite:///./ramadan.db",
+		"ENABLE_EMAIL_NOTIFICATIONS": "true",
+		"INIT_SECRET": "9f3c1b7e2d84b9a4f6d1c9f3c1b7e2d84b9a4f6d1c",
+		"JWT_ACCESS_TOKEN_EXPIRES": "2592000",
+		"JWT_ALGORITHM": "HS256",
+		"JWT_SECRET_KEY": "a9f3c1b7e2d84b9a4f6d1c0e8b7a5d3c9e2f4a1b8d6c7e9f0a2b4c5d6e7f8",
+		"MAIL_PASSWORD": "dvxcopuottebjraf",
+		"MAIL_PORT": "587",
+		"MAIL_SERVER": "smtp.gmail.com",
+		"MAIL_USERNAME": "it.basirah@gmail.com",
+		"MAIL_USE_TLS": "true",
+		"SUPER_ADMIN_EMAIL": "it.basirah@gmail.com",
+		"SUPER_ADMIN_PASSWORD": "Admin@123456@basirah@1000"
+	}
 }

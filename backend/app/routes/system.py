@@ -271,3 +271,86 @@ async def system_status():
             "error": str(e),
             "database_initialized": False
         }
+
+
+@router.get("/check-halqas")
+async def check_halqas_raw(
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Check halqas directly from database (raw SQL)."""
+    if current_user.role != "super_admin":
+        raise HTTPException(403, detail="Requires super admin role")
+
+    try:
+        # Execute raw SQL to see what's actually in the database
+        from app.d1_adapter import D1Session
+
+        if isinstance(db, D1Session):
+            # D1 database - use direct query
+            result = await db.db.prepare("SELECT id, name, supervisor_id, created_at, updated_at FROM halqas").all()
+            # D1 returns results in a specific format
+            from app.d1_adapter import _convert_js_to_py
+            raw_results = _convert_js_to_py(result)
+            halqas_raw = raw_results if isinstance(raw_results, list) else raw_results.get('results', [])
+        else:
+            # PostgreSQL - use SQLAlchemy
+            from sqlalchemy import text
+            result = await db.execute(text("SELECT id, name, supervisor_id, created_at, updated_at FROM halqas"))
+            halqas_raw = [dict(row) for row in result]
+
+        return {
+            "message": "Raw database query results",
+            "halqas": halqas_raw,
+            "count": len(halqas_raw) if isinstance(halqas_raw, list) else 0
+        }
+
+    except Exception as e:
+        import traceback
+        error_detail = f"{type(e).__name__}: {str(e)}"
+        traceback_str = ''.join(traceback.format_tb(e.__traceback__))
+        print(f"ERROR in check_halqas_raw: {error_detail}")
+        print(f"Traceback: {traceback_str}")
+        raise HTTPException(500, detail=error_detail)
+
+
+@router.post("/fix-halqa-names")
+async def fix_halqa_names(
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Fix any halqas with null or empty names."""
+    # Check if user is super admin
+    if current_user.role != "super_admin":
+        raise HTTPException(403, detail="Requires super admin role")
+
+    try:
+        from app.models.halqa import Halqa
+
+        # Query all halqas
+        halqas = await db.query(Halqa).all()
+
+        fixed_count = 0
+        for halqa in halqas:
+            # Check if name is None or empty
+            if not halqa.name or halqa.name.strip() == "":
+                # Set a default name
+                halqa.name = f"حلقة {halqa.id}"
+                db.merge(halqa)
+                fixed_count += 1
+
+        if fixed_count > 0:
+            await db.commit()
+
+        return {
+            "message": f"Fixed {fixed_count} halqa(s) with null/empty names",
+            "fixed_count": fixed_count
+        }
+
+    except Exception as e:
+        import traceback
+        error_detail = f"{type(e).__name__}: {str(e)}"
+        traceback_str = ''.join(traceback.format_tb(e.__traceback__))
+        print(f"ERROR in fix_halqa_names: {error_detail}")
+        print(f"Traceback: {traceback_str}")
+        raise HTTPException(500, detail=error_detail)

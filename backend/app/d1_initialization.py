@@ -75,9 +75,8 @@ async def initialize_d1_database() -> Dict:
             """
             CREATE TABLE IF NOT EXISTS halqas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
+                name TEXT NOT NULL CHECK(length(trim(name)) > 0),
                 supervisor_id INTEGER,
-                description TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (supervisor_id) REFERENCES users(id)
@@ -122,7 +121,25 @@ async def initialize_d1_database() -> Dict:
         statements = [db.prepare(sql) for sql in create_tables_sql]
         await db.batch(statements)
         report["tables_created"] = True
-        
+                
+        # Create indexes for performance
+        create_indexes_sql = [
+            # Users
+            "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
+            "CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)",
+            "CREATE INDEX IF NOT EXISTS idx_users_halqa_id ON users(halqa_id)",
+
+            # Daily cards
+            "CREATE INDEX IF NOT EXISTS idx_daily_cards_user_id ON daily_cards(user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_daily_cards_date ON daily_cards(date)",
+
+            # Halqas
+            "CREATE INDEX IF NOT EXISTS idx_halqas_supervisor_id ON halqas(supervisor_id)"
+        ]
+
+        index_statements = [db.prepare(sql) for sql in create_indexes_sql]
+        await db.batch(index_statements)
+
         # Create default settings (single row matching SQLAlchemy model)
         settings_sql = """
             INSERT INTO site_settings (enable_email_notifications)
@@ -171,10 +188,71 @@ async def initialize_d1_database() -> Dict:
     return report
 
 
+async def migrate_daily_cards_schema():
+    """
+    Migrate daily_cards table to the new schema if needed.
+    This preserves users/halqas data and only recreates daily_cards.
+    """
+    try:
+        db = get_d1_binding()
+        if not db:
+            return
+
+        # Check if the table has the new columns
+        result = await db.prepare("PRAGMA table_info(daily_cards)").all()
+        if hasattr(result, 'to_py'):
+            result = result.to_py()
+
+        columns = set()
+        if isinstance(result, dict):
+            for row in result.get('results', []):
+                columns.add(row.get('name', ''))
+        elif isinstance(result, list):
+            for row in result:
+                if isinstance(row, dict):
+                    columns.add(row.get('name', ''))
+
+        # If the new columns exist, no migration needed
+        if 'quran' in columns and 'tadabbur' in columns:
+            return
+
+        print("Migrating daily_cards table to new schema...")
+
+        # Drop old table and create new one
+        await db.prepare("DROP TABLE IF EXISTS daily_cards").run()
+        await db.prepare("""
+            CREATE TABLE IF NOT EXISTS daily_cards (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date DATE NOT NULL,
+                user_id INTEGER NOT NULL,
+                quran REAL DEFAULT 0,
+                tadabbur REAL DEFAULT 0,
+                duas REAL DEFAULT 0,
+                taraweeh REAL DEFAULT 0,
+                tahajjud REAL DEFAULT 0,
+                duha REAL DEFAULT 0,
+                rawatib REAL DEFAULT 0,
+                main_lesson REAL DEFAULT 0,
+                enrichment_lesson REAL DEFAULT 0,
+                charity_worship REAL DEFAULT 0,
+                extra_work REAL DEFAULT 0,
+                extra_work_description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                UNIQUE(user_id, date)
+            )
+        """).run()
+        print("daily_cards table migrated successfully")
+
+    except Exception as e:
+        print(f"Error migrating daily_cards: {e}")
+
+
 async def is_d1_initialized() -> bool:
     """
     Check if D1 database is already initialized.
-    
+
     Returns:
         True if database is initialized, False otherwise
     """
@@ -182,16 +260,21 @@ async def is_d1_initialized() -> bool:
         db = get_d1_binding()
         if not db:
             return False
-        
+
         from app.config import settings as app_settings
         admin_email = app_settings.SUPER_ADMIN_EMAIL.lower()
-        
+
         # Check if super admin exists
         result = await db.prepare(
             "SELECT id FROM users WHERE email = ? AND role = 'super_admin'"
         ).bind(admin_email).first()
-        
-        return result is not None
-        
+
+        if result is not None:
+            # DB is initialized, but check if daily_cards needs migration
+            await migrate_daily_cards_schema()
+            return True
+
+        return False
+
     except Exception:
         return False

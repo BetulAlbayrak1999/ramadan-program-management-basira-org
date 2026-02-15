@@ -7,7 +7,7 @@ from app.models.daily_card import DailyCard
 from app.dependencies import get_active_user
 from app.schemas.daily_card import DailyCardCreate, card_to_response
 
-router = APIRouter(prefix="/api/participant", tags=["participant"])
+router = APIRouter(prefix="/participant", tags=["participant"])
 
 
 @router.post("/card")

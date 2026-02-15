@@ -6,6 +6,7 @@ from app.database import get_db
 from app.config import settings as app_settings
 from app.models.user import User
 from app.models.site_settings import SiteSettings
+from app.models.halqa import Halqa
 from app.dependencies import get_current_user, create_access_token
 from app.schemas.user import (
     UserRegister, UserLogin, UserProfileUpdate,
@@ -14,7 +15,7 @@ from app.schemas.user import (
 from sqlalchemy import func
 from app.utils.email import send_new_registration_email, send_password_reset_email
 
-router = APIRouter(prefix="/api/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 # In-memory store for reset tokens (use Redis in production)
 reset_tokens = {}
@@ -91,6 +92,7 @@ async def login(data: UserLogin, db: Session = Depends(get_db)):
             print(f"Promoting user to super_admin and activating...")
             user.role = "super_admin"
             user.status = "active"
+            db.merge(user)  # Mark for update
             await db.commit()
         
         print(f"User status: {user.status}")
@@ -107,7 +109,16 @@ async def login(data: UserLogin, db: Session = Depends(get_db)):
 
         print(f"Creating access token for user {user.id}")
         token = create_access_token(user.id)
-        
+
+        # Load halqa for response
+        if user.halqa_id:
+            user.halqa = await db.get(Halqa, user.halqa_id)
+            if user.halqa:
+                if user.halqa.supervisor_id:
+                    user.halqa.supervisor = await db.get(User, user.halqa.supervisor_id)
+                else:
+                    user.halqa.supervisor = None
+
         print(f"Login successful for user {user.id}")
         return {"token": token, "user": user_to_response(user)}
         
@@ -122,8 +133,17 @@ async def login(data: UserLogin, db: Session = Depends(get_db)):
 
 
 @router.get("/me")
-async def get_me(user: User = Depends(get_current_user)):
+async def get_me(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get current user profile. Returns a refreshed token to extend the session."""
+    # Load halqa for response
+    if user.halqa_id:
+        user.halqa = await db.get(Halqa, user.halqa_id)
+        if user.halqa:
+            if user.halqa.supervisor_id:
+                user.halqa.supervisor = await db.get(User, user.halqa.supervisor_id)
+            else:
+                user.halqa.supervisor = None
+
     new_token = create_access_token(user.id)
     return {"user": user_to_response(user), "token": new_token}
 
@@ -141,8 +161,19 @@ async def update_profile(
         if value is not None:
             setattr(user, field, value)
 
+    db.merge(user)  # Mark for update
     await db.commit()
     await db.refresh(user)
+
+    # Load halqa for response
+    if user.halqa_id:
+        user.halqa = await db.get(Halqa, user.halqa_id)
+        if user.halqa:
+            if user.halqa.supervisor_id:
+                user.halqa.supervisor = await db.get(User, user.halqa.supervisor_id)
+            else:
+                user.halqa.supervisor = None
+
     return {"message": "تم تحديث الملف الشخصي", "user": user_to_response(user)}
 
 
@@ -160,6 +191,7 @@ async def change_password(
         raise HTTPException(400, detail="كلمتا المرور غير متطابقتين")
 
     user.set_password(data.new_password)
+    db.merge(user)  # Mark for update
     await db.commit()
     return {"message": "تم تغيير كلمة المرور بنجاح"}
 
@@ -205,6 +237,7 @@ async def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
         raise HTTPException(404, detail="المستخدم غير موجود")
 
     user.set_password(data.new_password)
+    db.merge(user)  # Mark for update
     await db.commit()
     del reset_tokens[email]
 

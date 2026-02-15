@@ -18,13 +18,22 @@ class DailyCardCreate(BaseModel):
     extra_work_description: str = ""
 
 
+def _to_isoformat(value):
+    """Convert date/datetime to ISO format string. Handles both datetime objects and strings."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value  # Already a string (from D1)
+    return value.isoformat()  # datetime object (from PostgreSQL)
+
+
 def card_to_response(card) -> dict:
     """Build card response dict matching the frontend expected format."""
     return {
         "id": card.id,
         "tadabbur": card.tadabbur,
         "user_id": card.user_id,
-        "date": card.date.isoformat(),
+        "date": _to_isoformat(card.date),
         "quran": card.quran,
         "duas": card.duas,
         "taraweeh": card.taraweeh,
@@ -39,6 +48,6 @@ def card_to_response(card) -> dict:
         "total_score": card.total_score,
         "max_score": card.max_score,
         "percentage": card.percentage,
-        "created_at": card.created_at.isoformat() if card.created_at else None,
-        "updated_at": card.updated_at.isoformat() if card.updated_at else None,
+        "created_at": _to_isoformat(card.created_at),
+        "updated_at": _to_isoformat(card.updated_at),
     }

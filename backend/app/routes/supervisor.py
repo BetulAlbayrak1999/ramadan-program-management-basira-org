@@ -12,7 +12,7 @@ from app.schemas.user import user_to_response
 from app.schemas.daily_card import DailyCardCreate, card_to_response
 from app.schemas.halqa import halqa_to_response
 
-router = APIRouter(prefix="/api/supervisor", tags=["supervisor"])
+router = APIRouter(prefix="/supervisor", tags=["supervisor"])
 
 MAX_PER_DAY = len(DailyCard.SCORE_FIELDS) * 10  # 110
 RAMADAN_START = date(2026, 1, 19)
@@ -31,12 +31,18 @@ async def _resolve_halqa(user, db, halqa_id=None):
             halqa = await db.get(Halqa, halqa_id)
             if not halqa:
                 raise HTTPException(404, detail="الحلقة غير موجودة")
+            # Load supervisor for the halqa
+            if halqa.supervisor_id:
+                halqa.supervisor = await db.get(User, halqa.supervisor_id)
             return halqa
         return None  # means "all halqas"
     # Regular supervisor
     halqa = await db.query(Halqa).filter_by(supervisor_id=user.id).first()
     if not halqa:
         raise HTTPException(404, detail="لا توجد حلقة مسندة إليك")
+    # Load supervisor for the halqa
+    if halqa.supervisor_id:
+        halqa.supervisor = await db.get(User, halqa.supervisor_id)
     return halqa
 
 
@@ -72,7 +78,20 @@ async def get_all_halqas(
     else:
         halqa = await db.query(Halqa).filter_by(supervisor_id=user.id).first()
         halqas = [halqa] if halqa else []
-    return {"halqas": [halqa_to_response(h) for h in halqas]}
+
+    # Manually load supervisors and members for each halqa (D1 doesn't support eager loading)
+    halqa_members_map = {}
+    for halqa in halqas:
+        if halqa.supervisor_id:
+            halqa.supervisor = await db.get(User, halqa.supervisor_id)
+        else:
+            halqa.supervisor = None
+
+        # Load members for this halqa and store in map
+        members = await db.query(User).filter_by(halqa_id=halqa.id).all()
+        halqa_members_map[halqa.id] = members
+
+    return {"halqas": [halqa_to_response(h, halqa_members_map.get(h.id, [])) for h in halqas]}
 
 
 @router.get("/members")
@@ -84,8 +103,19 @@ async def get_halqa_members(
     """Get members. Super admin can filter by halqa_id or see all."""
     halqa = await _resolve_halqa(user, db, halqa_id)
     members = await _get_members(db, halqa)
+
+    # Load halqa for each member (D1 doesn't support eager loading)
+    for m in members:
+        if m.halqa_id:
+            m.halqa = await db.get(Halqa, m.halqa_id)
+            if m.halqa:
+                if m.halqa.supervisor_id:
+                    m.halqa.supervisor = await db.get(User, m.halqa.supervisor_id)
+                else:
+                    m.halqa.supervisor = None
+
     return {
-        "halqa": halqa_to_response(halqa) if halqa else None,
+        "halqa": halqa_to_response(halqa, members) if halqa else None,
         "members": [user_to_response(m) for m in members],
     }
 
@@ -98,6 +128,16 @@ async def get_member_cards(
 ):
     """Get all cards for a specific member."""
     member = await _verify_member_access(user, member_id, db)
+
+    # Load halqa for response
+    if member.halqa_id:
+        member.halqa = await db.get(Halqa, member.halqa_id)
+        if member.halqa:
+            if member.halqa.supervisor_id:
+                member.halqa.supervisor = await db.get(User, member.halqa.supervisor_id)
+            else:
+                member.halqa.supervisor = None
+
     cards = await db.query(DailyCard).filter_by(user_id=member_id).order_by(DailyCard.date.desc()).all()
     return {
         "member": user_to_response(member),
@@ -114,6 +154,16 @@ async def get_member_card_detail(
 ):
     """Get a specific daily card for a member (full detail)."""
     member = await _verify_member_access(user, member_id, db)
+
+    # Load halqa for response
+    if member.halqa_id:
+        member.halqa = await db.get(Halqa, member.halqa_id)
+        if member.halqa:
+            if member.halqa.supervisor_id:
+                member.halqa.supervisor = await db.get(User, member.halqa.supervisor_id)
+            else:
+                member.halqa.supervisor = None
+
     card = await db.query(DailyCard).filter_by(
         user_id=member_id, date=date.fromisoformat(card_date)
     ).first()
@@ -182,6 +232,11 @@ async def get_leaderboard(
     halqa = await _resolve_halqa(user, db, halqa_id)
     members = await _get_members(db, halqa)
 
+    # Load halqa for each member (D1 doesn't support eager loading)
+    for m in members:
+        if m.halqa_id:
+            m.halqa = await db.get(Halqa, m.halqa_id)
+
     today = date.today()
     elapsed_days = max((min(today, RAMADAN_END) - RAMADAN_START).days + 1, 1)
 
@@ -207,7 +262,7 @@ async def get_leaderboard(
         entry["rank"] = i + 1
 
     return {
-        "halqa": halqa_to_response(halqa) if halqa else None,
+        "halqa": halqa_to_response(halqa, []) if halqa else None,
         "leaderboard": leaderboard,
     }
 
@@ -226,6 +281,16 @@ async def get_daily_summary(
     halqa = await _resolve_halqa(user, db, halqa_id)
     members = await _get_members(db, halqa)
 
+    # Load halqa for each member (D1 doesn't support eager loading)
+    for member in members:
+        if member.halqa_id:
+            member.halqa = await db.get(Halqa, member.halqa_id)
+            if member.halqa:
+                if member.halqa.supervisor_id:
+                    member.halqa.supervisor = await db.get(User, member.halqa.supervisor_id)
+                else:
+                    member.halqa.supervisor = None
+
     submitted = []
     not_submitted = []
 
@@ -241,7 +306,7 @@ async def get_daily_summary(
 
     return {
         "date": target_date.isoformat(),
-        "halqa": halqa_to_response(halqa) if halqa else None,
+        "halqa": halqa_to_response(halqa, []) if halqa else None,
         "submitted": submitted,
         "not_submitted": not_submitted,
         "submitted_count": len(submitted),
@@ -266,8 +331,18 @@ async def get_range_summary(
 
     halqa = await _resolve_halqa(user, db, halqa_id)
     members = await _get_members(db, halqa)
-    summary = []
 
+    # Load halqa and supervisor for each member (D1 doesn't support eager loading)
+    for member in members:
+        if member.halqa_id:
+            member.halqa = await db.get(Halqa, member.halqa_id)
+            if member.halqa:
+                if member.halqa.supervisor_id:
+                    member.halqa.supervisor = await db.get(User, member.halqa.supervisor_id)
+                else:
+                    member.halqa.supervisor = None
+
+    summary = []
     for member in members:
         cards = await db.query(DailyCard).filter(
             DailyCard.user_id == member.id,
@@ -292,7 +367,7 @@ async def get_range_summary(
     summary.sort(key=lambda x: x["total_score"], reverse=True)
 
     return {
-        "halqa": halqa_to_response(halqa) if halqa else None,
+        "halqa": halqa_to_response(halqa, []) if halqa else None,
         "date_from": start.isoformat(),
         "date_to": end.isoformat(),
         "total_days": total_days,
@@ -313,8 +388,18 @@ async def get_weekly_summary(
     week_start = today - timedelta(days=today.weekday())
 
     members = await _get_members(db, halqa)
-    summary = []
 
+    # Load halqa for each member (D1 doesn't support eager loading)
+    for member in members:
+        if member.halqa_id:
+            member.halqa = await db.get(Halqa, member.halqa_id)
+            if member.halqa:
+                if member.halqa.supervisor_id:
+                    member.halqa.supervisor = await db.get(User, member.halqa.supervisor_id)
+                else:
+                    member.halqa.supervisor = None
+
+    summary = []
     week_days = (today - week_start).days + 1
 
     for member in members:
@@ -338,7 +423,7 @@ async def get_weekly_summary(
     summary.sort(key=lambda x: x["total_score"], reverse=True)
 
     return {
-        "halqa": halqa_to_response(halqa) if halqa else None,
+        "halqa": halqa_to_response(halqa, []) if halqa else None,
         "week_start": week_start.isoformat(),
         "week_end": today.isoformat(),
         "summary": summary,
@@ -366,6 +451,11 @@ async def export_cards(
 
     halqa = await _resolve_halqa(user, db, halqa_id)
     members = await _get_members(db, halqa)
+
+    # Load halqa for each member (D1 doesn't support eager loading)
+    for member in members:
+        if member.halqa_id:
+            member.halqa = await db.get(Halqa, member.halqa_id)
 
     # Apply search filters
     if search_name:

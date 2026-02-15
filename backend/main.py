@@ -35,8 +35,8 @@ async def root():
         "version": settings.APP_VERSION,
         "status": "online",
         "docs": "/docs",
-        "health": "/system/health",
-        "system_status": "/system/status"
+        "health": "/api/system/health",
+        "system_status": "/api/system/status"
     }
 
 
@@ -72,9 +72,9 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Include all routers
+# Include all routers with /api prefix
 for router in all_routers:
-    app.include_router(router)
+    app.include_router(router, prefix="/api")
 
 
 # NOTE: Startup logic moved to app/initialization.py for Cloudflare Workers compatibility
