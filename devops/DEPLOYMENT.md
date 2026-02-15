@@ -3,6 +3,7 @@
 ## 🚀 Overview
 
 This guide covers the complete deployment process for the Ramadan Program Management System with:
+
 - **Separate PostgreSQL and Application containers**
 - **Cloudflare Tunnel integration**
 - **Secure user separation** (postgres admin, ramadan_app backend, monitor health)
@@ -22,11 +23,13 @@ This guide covers the complete deployment process for the Ramadan Program Manage
 ## 🔐 Security Architecture
 
 ### Database Users:
+
 1. **postgres** (superuser) - Administrative tasks only, never used by application
 2. **ramadan_app** - Backend application user with restricted privileges
 3. **monitor** - Read-only user for health checks and monitoring
 
 ### Network Security:
+
 - PostgreSQL: Bound to `127.0.0.1:5432` (localhost only)
 - Application: Bound to `127.0.0.1:8000` (localhost only)
 - Cloudflare Tunnel: Connects to `127.0.0.1:8000` and exposes to internet
@@ -79,6 +82,7 @@ MONITOR_USER_PASSWORD=your_monitor_password_here_min_16_chars
 ```
 
 **🔒 Security Tips:**
+
 - Use different passwords for each user
 - Minimum 20 characters for production passwords
 - Generate strong passwords: `openssl rand -base64 32`
@@ -141,6 +145,7 @@ docker network create ramadan_network
 ```
 
 Verify:
+
 ```bash
 docker network ls | grep ramadan_network
 ```
@@ -175,18 +180,15 @@ docker logs ramadan_postgres
 
 ```bash
 # Connect as admin
-docker exec -it ramadan_postgres psql -U postgres -d ramadan_db
+docker exec -it ramadan_postgres psql -U postgres -c "\du"
+docker exec -it ramadan_postgres psql -U postgres -c "\l"
 
-# Inside psql, list users:
-\du
 
 # You should see:
 # - postgres (superuser)
 # - ramadan_app (with limited privileges)
 # - monitor (with monitoring privileges)
 
-# Exit psql
-\q
 ```
 
 ### 3.4 Test Application User Connection
@@ -202,6 +204,7 @@ docker exec -it ramadan_postgres psql -U ramadan_app -d ramadan_db -c "SELECT cu
 ```
 
 **🔴 If this fails, check:**
+
 1. APP_USER_PASSWORD is correct in `devops/.env`
 2. Check logs: `docker logs ramadan_postgres`
 3. Ensure `00-init-users.sh` is executable: `chmod +x devops/postgresql/00-init-users.sh`
@@ -242,6 +245,7 @@ docker logs ramadan_app | grep "database\|connection"
 ```
 
 **🔴 If connection fails:**
+
 1. Verify PostgreSQL is running: `docker ps | grep postgres`
 2. Check if both containers are on the same network:
    ```bash
@@ -249,108 +253,9 @@ docker logs ramadan_app | grep "database\|connection"
    docker inspect ramadan_postgres | grep ramadan_network
    ```
 3. Verify DATABASE_URL in root `.env` uses `ramadan_app` user
-4. Check APP_USER_PASSWORD matches between both `.env` files
+4. Check APP_USER_PASSWORD matches between both `.env` files---
 
----
-
-## 🌐 Step 5: Cloudflare Tunnel Configuration
-
-### 5.1 Install Cloudflared
-
-**On Ubuntu/Debian:**
-```bash
-wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-sudo dpkg -i cloudflared-linux-amd64.deb
-```
-
-**On other systems:** See https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation
-
-### 5.2 Authenticate Cloudflared
-
-```bash
-cloudflared tunnel login
-```
-
-This opens a browser to authenticate with your Cloudflare account.
-
-### 5.3 Create Tunnel
-
-```bash
-# Create tunnel
-cloudflared tunnel create ramadan-app
-
-# Note the Tunnel ID from output
-# Example: Created tunnel ramadan-app with id: abc123def456...
-```
-
-### 5.4 Configure Tunnel
-
-Create tunnel configuration:
-
-```bash
-sudo mkdir -p /etc/cloudflared
-sudo nano /etc/cloudflared/config.yml
-```
-
-Add this configuration:
-
-```yaml
-tunnel: ramadan-app
-credentials-file: /root/.cloudflared/<YOUR_TUNNEL_ID>.json
-
-ingress:
-  # Route your domain to the application
-  - hostname: yourdomain.com
-    service: http://127.0.0.1:8000
-  
-  # Optional: Add www subdomain
-  - hostname: www.yourdomain.com
-    service: http://127.0.0.1:8000
-  
-  # Catch-all rule (required)
-  - service: http_status:404
-```
-
-**Replace:**
-- `<YOUR_TUNNEL_ID>` with your actual tunnel ID
-- `yourdomain.com` with your domain
-
-### 5.5 Create DNS Records
-
-```bash
-# Point your domain to the tunnel
-cloudflared tunnel route dns ramadan-app yourdomain.com
-cloudflared tunnel route dns ramadan-app www.yourdomain.com
-```
-
-### 5.6 Start Tunnel
-
-**For testing:**
-```bash
-cloudflared tunnel run ramadan-app
-```
-
-**For production (install as service):**
-```bash
-sudo cloudflared service install
-sudo systemctl start cloudflared
-sudo systemctl enable cloudflared
-sudo systemctl status cloudflared
-```
-
-### 5.7 Verify Tunnel
-
-```bash
-# Check tunnel status
-cloudflared tunnel info ramadan-app
-
-# Test from external network
-curl https://yourdomain.com
-```
-
----
-
-## 🔍 Step 6: Verification & Testing
+## 🔍 Step 5: Verification & Testing
 
 ### 6.1 Complete System Check
 
@@ -407,7 +312,7 @@ docker stats
 
 ---
 
-## 📊 Step 7: Monitoring & Maintenance
+## 📊 Step 6: Monitoring & Maintenance
 
 ### 7.1 Daily Health Checks
 
@@ -528,10 +433,12 @@ docker exec -it ramadan_postgres psql -U ramadan_app -d ramadan_db
 ### Issue: Application can't connect to database
 
 **Symptoms:**
+
 - Application logs show "connection refused"
 - Health check fails
 
 **Solutions:**
+
 ```bash
 # 1. Verify PostgreSQL is running
 docker ps | grep postgres
@@ -555,6 +462,7 @@ docker exec ramadan_postgres psql -U ramadan_app -d ramadan_db -c "SELECT 1;"
 **Cause:** Password mismatch between `.env` files
 
 **Solution:**
+
 ```bash
 # 1. Verify passwords match
 grep APP_USER_PASSWORD .env
@@ -574,10 +482,12 @@ docker-compose restart
 ### Issue: Cloudflare tunnel not accessible
 
 **Symptoms:**
+
 - Domain doesn't resolve
 - Connection timeout
 
 **Solutions:**
+
 ```bash
 # 1. Check tunnel status
 cloudflared tunnel info ramadan-app
@@ -599,10 +509,12 @@ sudo systemctl restart cloudflared
 ### Issue: High database connections
 
 **Symptoms:**
+
 - "too many connections" error
 - Slow performance
 
 **Solutions:**
+
 ```bash
 # 1. Check active connections
 docker exec -it ramadan_postgres psql -U monitor -d ramadan_db -c "SELECT count(*) FROM active_connections;"
@@ -651,6 +563,7 @@ max_parallel_workers = 8
 ```
 
 Then restart PostgreSQL:
+
 ```bash
 cd devops
 docker-compose -f docker-compose.postgres.yml restart
@@ -674,16 +587,19 @@ docker-compose -f docker-compose.postgres.yml restart
 ## 📞 Support & Maintenance
 
 ### Log Locations:
+
 - Application: `docker logs ramadan_app`
 - PostgreSQL: `docker logs ramadan_postgres`
 - Cloudflare: `sudo journalctl -u cloudflared`
 
 ### Important Files:
+
 - `.env` - Application configuration
 - `devops/.env` - Database configuration
 - `/etc/cloudflared/config.yml` - Tunnel configuration
 
 ### Regular Maintenance Schedule:
+
 - **Daily**: Check logs, monitor disk space
 - **Weekly**: Review database size, check backups
 - **Monthly**: Update Docker images, security patches
@@ -716,6 +632,7 @@ Before going live, verify:
 **🎉 Deployment Complete!**
 
 Your Ramadan Program Management System is now running securely with:
+
 - ✅ Separate database and application users
 - ✅ Optimized PostgreSQL for your server specs
 - ✅ Cloudflare Tunnel for secure public access
