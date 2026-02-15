@@ -66,5 +66,7 @@ networks:
 volumes:
   postgres_data:
     name: ramadan_postgres_data
+    external: true
   postgres_logs:
     name: ramadan_postgres_logs
+    external: true
