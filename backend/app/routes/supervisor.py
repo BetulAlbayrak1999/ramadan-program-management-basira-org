@@ -15,7 +15,7 @@ from app.schemas.halqa import halqa_to_response
 router = APIRouter(prefix="/api/supervisor", tags=["supervisor"])
 
 MAX_PER_DAY = len(DailyCard.SCORE_FIELDS) * 10  # 110
-RAMADAN_START = date(2026, 1, 19)
+RAMADAN_START = date(2026, 2, 19)
 RAMADAN_END = date(2026, 3, 19)
 
 require_supervisor = RoleChecker("supervisor", "super_admin")

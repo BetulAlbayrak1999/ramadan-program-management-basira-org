@@ -104,7 +104,7 @@ APP_USER_PASSWORD=YOUR_APP_PASSWORD_HERE  # Same as devops/.env
 
 # JWT Secret - Generate with: openssl rand -hex 32
 JWT_SECRET_KEY=your_generated_jwt_secret_key
-JWT_ACCESS_TOKEN_EXPIRES=2592000
+JWT_ACCESS_TOKEN_EXPIRES=3600
 
 # Email configuration
 MAIL_SERVER=smtp.gmail.com

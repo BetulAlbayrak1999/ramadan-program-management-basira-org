@@ -99,7 +99,7 @@ export default function DashboardPage() {
           <div className="card-title mb-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Users size={18} /> المشرف
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
               <User size={14} style={{ color: 'var(--primary)' }} />
               <span style={{ color: 'var(--text-muted)' }}>الاسم:</span>

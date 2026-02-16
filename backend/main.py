@@ -58,6 +58,7 @@ async def log_error_responses(request: Request, call_next):
 
 # CORS - Restricted to your domain
 allowed_origins = [
+    "http://localhost:3000",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
     # Production domain

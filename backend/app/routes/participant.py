@@ -17,13 +17,13 @@ def save_card(
     db: Session = Depends(get_db),
 ):
     """Create a daily card. Each date can only be submitted once (no editing)."""
-    RAMADAN_START = date(2026, 1, 19)
+    RAMADAN_START = date(2026, 2, 19)
     RAMADAN_END = date(2026, 3, 19)
 
     if data.date > date.today():
         raise HTTPException(400, detail="لا يمكن إدخال بطاقة بتاريخ مستقبلي")
     if data.date < RAMADAN_START or data.date > RAMADAN_END:
-        raise HTTPException(400, detail="لا يمكن إدخال بطاقة خارج فترة البرنامج الرمضاني (19 فبراير - 19 مارس)")
+        raise HTTPException(400, detail="لا يمكن إدخال بطاقة خارج فترة البرنامج الرمضاني (1 رمضان يقابل 19 شباط - 30 رمضان يقابل 19 آذار)")
 
     existing = db.query(DailyCard).filter_by(user_id=user.id, date=data.date).first()
     if existing:

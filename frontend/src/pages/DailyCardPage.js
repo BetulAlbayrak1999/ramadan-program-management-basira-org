@@ -29,7 +29,7 @@ function formatDate(d) {
 
 // Anchor: 19 Feb 2026 = 1 Ramadan 1447 (Turkey observation)
 const SHABAN_START = new Date(2026, 0, 21);  // 1 Sha'ban 1447
-const RAMADAN_START_DATE = new Date(2026, 1, 19); // 1 Ramadan 1447
+const RAMADAN_START_DATE = new Date(2026, 2, 19); // 1 Ramadan 1447
 const SHAWWAL_START = new Date(2026, 2, 20); // 1 Shawwal 1447
 
 function getHijriInfo(d) {

@@ -39,7 +39,7 @@ export default function AdminSettingsPage() {
           <button
             className={`btn ${settings.enable_email_notifications ? 'btn-primary' : 'btn-secondary'}`}
             onClick={toggleNotifications}
-            style={{ minWidth: 120 }}
+            style={{ minWidth: 'auto' }}
           >
             {settings.enable_email_notifications ? '✅ مُفعّل' : '❌ مُعطّل'}
           </button>

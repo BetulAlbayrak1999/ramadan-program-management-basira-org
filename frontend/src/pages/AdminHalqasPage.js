@@ -233,7 +233,7 @@ export default function AdminHalqasPage() {
           <div className="empty-state-text">{halqaSearch ? 'لا توجد حلقات تطابق البحث' : 'لا توجد حلقات بعد'}</div>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: '1rem' }}>
           {filteredHalqas.map((h) => (
             <div className="card" key={h.id}>
               <div className="card-header">
@@ -349,7 +349,7 @@ export default function AdminHalqasPage() {
                     style={{ paddingRight: 28, width: '100%', fontSize: '0.78rem' }} />
                 </div>
                 <select className="filter-input" value={supGender}
-                  onChange={(e) => setSupGender(e.target.value)} style={{ fontSize: '0.78rem', minWidth: 80 }}>
+                  onChange={(e) => setSupGender(e.target.value)} style={{ fontSize: '0.78rem' }}>
                   <option value="">كل الجنسين</option>
                   <option value="male">ذكر</option>
                   <option value="female">أنثى</option>
@@ -439,7 +439,7 @@ export default function AdminHalqasPage() {
                     style={{ paddingRight: 28, width: '100%', fontSize: '0.78rem' }} />
                 </div>
                 <select className="filter-input" value={supGender}
-                  onChange={(e) => setSupGender(e.target.value)} style={{ fontSize: '0.78rem', minWidth: 80 }}>
+                  onChange={(e) => setSupGender(e.target.value)} style={{ fontSize: '0.78rem' }}>
                   <option value="">كل الجنسين</option>
                   <option value="male">ذكر</option>
                   <option value="female">أنثى</option>

@@ -17,7 +17,7 @@ services:
       
       # JWT Configuration
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      JWT_ACCESS_TOKEN_EXPIRES: ${JWT_ACCESS_TOKEN_EXPIRES:-2592000}
+      JWT_ACCESS_TOKEN_EXPIRES: ${JWT_ACCESS_TOKEN_EXPIRES:-3600}
       
       # Mail Configuration
       MAIL_SERVER: ${MAIL_SERVER}

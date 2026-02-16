@@ -46,7 +46,7 @@ export default function Layout() {
       {/* Mobile Header */}
       <div className="mobile-header">
         <button className="hamburger" onClick={() => setSidebarOpen(true)}><Menu size={22} /></button>
-        <span className="mobile-logo"><img src="/logo.png" alt="بصيرة" style={{ height: 28, verticalAlign: 'middle', marginLeft: 6 }} />المنصة الرمضانية</span>
+        <NavLink to="/dashboard" className="mobile-logo" onClick={closeSidebar} style={{ textDecoration: 'none', color: 'inherit' }}><img src="/logo.png" alt="بصيرة" style={{ height: 28, verticalAlign: 'middle', marginLeft: 6 }} />المنصة الرمضانية</NavLink>
         <span style={{ width: 40 }} />
       </div>
 
@@ -60,7 +60,7 @@ export default function Layout() {
             style={{ display: sidebarOpen ? 'flex' : 'none', position: 'absolute', left: '1rem', top: '1rem' }}>
             <X size={20} />
           </button>
-          <div className="sidebar-logo"><img src="/logo.png" alt="بصيرة" style={{ height: 28 }} /> المنصة الرمضانية</div>
+          <NavLink to="/dashboard" className="sidebar-logo" onClick={closeSidebar} style={{ textDecoration: 'none', color: 'inherit' }}><img src="/logo.png" alt="بصيرة" style={{ height: 28 }} /> المنصة الرمضانية</NavLink>
           <div className="sidebar-subtitle">متابعة الإنجاز اليومي</div>
         </div>
 
