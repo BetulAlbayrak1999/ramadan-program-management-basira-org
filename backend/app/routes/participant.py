@@ -23,7 +23,7 @@ def save_card(
     if data.date > date.today():
         raise HTTPException(400, detail="لا يمكن إدخال بطاقة بتاريخ مستقبلي")
     if data.date < RAMADAN_START or data.date > RAMADAN_END:
-        raise HTTPException(400, detail="لا يمكن إدخال بطاقة خارج فترة البرنامج الرمضاني (1 رمضان يقابل 19 شباط - 30 رمضان يقابل 19 آذار)")
+        raise HTTPException(400, detail="لا يمكن إدخال بطاقة خارج فترة البرنامج الرمضاني (1 رمضان الذي يقابل 19 شباط -- 29 رمضان الذي يقابل 19 آذار)")
 
     existing = db.query(DailyCard).filter_by(user_id=user.id, date=data.date).first()
     if existing:

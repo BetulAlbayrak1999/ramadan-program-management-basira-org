@@ -134,7 +134,7 @@ a {
 .sidebar-logo {
   font-size: 1.1rem;
   font-weight: 800;
-  color: var(--sidebar-text-bright);
+  color: rgba(255, 255, 255, 0.7);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -146,6 +146,8 @@ a {
 
 .sidebar-logo img {
   border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2px;
 }
 
 .sidebar-subtitle {
@@ -265,7 +267,7 @@ a {
 .mobile-logo {
   font-size: 0.95rem;
   font-weight: 800;
-  color: var(--sidebar-text-bright);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .hamburger {
