@@ -134,9 +134,9 @@ export default function AdminAnalyticsPage() {
           onChange={(e) => updateFilter('member', e.target.value)} />
         <input className="filter-input" placeholder="اسم المشرف" value={filters.supervisor}
           onChange={(e) => updateFilter('supervisor', e.target.value)} />
-        <input className="filter-input" type="number" placeholder="أدنى %" style={{ width: 80 }}
+        <input className="filter-input" type="number" placeholder="أدنى %" style={{ flex: '0 1 80px' }}
           value={filters.min_pct} onChange={(e) => updateFilter('min_pct', e.target.value)} />
-        <input className="filter-input" type="number" placeholder="أعلى %" style={{ width: 80 }}
+        <input className="filter-input" type="number" placeholder="أعلى %" style={{ flex: '0 1 80px' }}
           value={filters.max_pct} onChange={(e) => updateFilter('max_pct', e.target.value)} />
         <select className="filter-input" value={filters.sort_by} onChange={(e) => updateFilter('sort_by', e.target.value)}>
           <option value="percentage">ترتيب بالنسبة</option>

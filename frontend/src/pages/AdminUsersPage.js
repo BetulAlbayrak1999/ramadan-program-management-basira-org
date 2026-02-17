@@ -363,7 +363,7 @@ export default function AdminUsersPage() {
       </div>
 
       <div className="filters-bar">
-        <input className="filter-input" style={{ flex: 1, minWidth: 200 }} placeholder="🔍 بحث بالاسم أو البريد..."
+        <input className="filter-input" style={{ flex: '1 1 200px' }} placeholder="🔍 بحث بالاسم أو البريد..."
           value={search} onChange={(e) => setSearch(e.target.value)} />
         <button className="btn btn-secondary btn-sm" onClick={downloadTemplate}>📥 قالب الاستيراد</button>
         <label className="btn btn-gold btn-sm" style={{ cursor: 'pointer' }}>
@@ -387,7 +387,7 @@ export default function AdminUsersPage() {
             <button className="btn btn-primary btn-sm" onClick={() => requestBulkAction('activate')}>تفعيل الكل</button>
             <button className="btn btn-danger btn-sm" onClick={() => requestBulkAction('withdraw')}>سحب الكل</button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <select className="filter-input" style={{ minWidth: 120, padding: '0.3rem' }}
+              <select className="filter-input" style={{ flex: '1 1 120px', padding: '0.3rem' }}
                 value={bulkHalqaId} onChange={(e) => setBulkHalqaId(e.target.value)}>
                 <option value="">اختر حلقة</option>
                 {halqas.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
@@ -431,7 +431,7 @@ export default function AdminUsersPage() {
                     <td><span className={`badge ${statusBadge[u.status]}`}>{statusLabel[u.status]}</span></td>
                     <td><span className="badge badge-info">{roleLabel[u.role]}</span></td>
                     <td>
-                      <select className="filter-input" style={{ minWidth: 100, padding: '0.3rem' }}
+                      <select className="filter-input" style={{ padding: '0.3rem' }}
                         value={u.halqa_id || ''} onChange={(e) => confirmAssignHalqa(u, e.target.value)}>
                         <option value="">بدون</option>
                         {halqas.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
@@ -452,7 +452,7 @@ export default function AdminUsersPage() {
                           <button className="btn btn-danger btn-sm" onClick={() => confirmWithdraw(u)}>سحب</button>
                         )}
                         <button className="btn btn-secondary btn-sm" onClick={() => openEdit(u)}>✏️</button>
-                        <select className="filter-input" style={{ minWidth: 80, padding: '0.3rem', fontSize: '0.7rem' }}
+                        <select className="filter-input" style={{ padding: '0.3rem', fontSize: '0.7rem' }}
                           value={u.role} onChange={(e) => confirmSetRole(u, e.target.value)}>
                           <option value="participant">مشارك</option>
                           <option value="supervisor">مشرف</option>

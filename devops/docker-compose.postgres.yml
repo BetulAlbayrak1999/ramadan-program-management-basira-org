@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ramadan_postgres
+    restart: unless-stopped
+    
+    # Load environment variables from .env file
+    env_file:
+      - .env
+    
+    environment:
+      # PostgreSQL Admin User (superuser)
+      POSTGRES_USER: postgres                                    # Admin/superuser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}                    # Admin password
+      POSTGRES_DB: ${POSTGRES_DB:-ramadan_db}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      
+      # Application User Credentials (used by backend)
+      APP_USER_PASSWORD: ${APP_USER_PASSWORD}                    # Backend app user password
+      
+      # Monitoring User Credentials (for health checks)
+      MONITOR_USER_PASSWORD: ${MONITOR_USER_PASSWORD}            # Monitor user password
+      
+    volumes:
+      # Data persistence with Docker volume
+      - postgres_data:/var/lib/postgresql/data
+      
+      # Custom configuration (read-only)
+      - ./postgresql/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./postgresql/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      
+      # Initialization scripts (executed in alphabetical order)
+      - ./postgresql/00-init-users.sh:/docker-entrypoint-initdb.d/00-init-users.sh:ro
+      - ./postgresql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      
+      # Logs with Docker volume
+      - postgres_logs:/var/log/postgresql
+      
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c hba_file=/etc/postgresql/pg_hba.conf
+      
+    ports:
+      - "127.0.0.1:5432:5432"                                    # Bind to localhost only (for Cloudflare tunnel)
+      
+    networks:
+      - ramadan_network
+      
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB:-ramadan_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+      
+    shm_size: 512mb                                               # Increased for 12GB RAM server
+
+networks:
+  ramadan_network:
+    name: ramadan_network
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: ramadan_postgres_data
+    external: true
+  postgres_logs:
+    name: ramadan_postgres_logs
+    external: true

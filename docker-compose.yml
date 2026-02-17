@@ -1,0 +1,63 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ramadan_app
+    restart: unless-stopped
+    
+    # Load environment variables from .env file
+    env_file:
+      - .env
+    
+    environment:
+      # Database connection - uses application user (ramadan_app), NOT admin user
+      # Format: postgresql://username:password@host:port/database
+      DATABASE_URL:  ${DATABASE_URL}
+      
+      # JWT Configuration
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ACCESS_TOKEN_EXPIRES: ${JWT_ACCESS_TOKEN_EXPIRES:-3600}
+      
+      # Mail Configuration
+      MAIL_SERVER: ${MAIL_SERVER}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USE_TLS: ${MAIL_USE_TLS:-true}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      
+      # Admin Configuration
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
+      
+      # Notifications
+      ENABLE_EMAIL_NOTIFICATIONS: ${ENABLE_EMAIL_NOTIFICATIONS:-true}
+      
+    ports:
+      # Bind to localhost only - Cloudflare tunnel will connect to this
+      - "127.0.0.1:8000:8000"
+      
+    networks:
+      - ramadan_network
+      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      
+    volumes:
+      - app_logs:/app/logs
+      
+    # Note: Since postgres runs in separate docker-compose, we can't use depends_on
+    # Make sure to start postgres container BEFORE starting this app container
+
+networks:
+  ramadan_network:
+    name: ramadan_network
+    external: true  # Network created by docker-compose.postgres.yml
+
+volumes:
+  app_logs:
+    name: ramadan_app_logs

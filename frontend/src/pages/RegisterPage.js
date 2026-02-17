@@ -119,7 +119,7 @@ export default function RegisterPage() {
           <div className="form-group">
             <label className="form-label">كيف عرفت بالموقع؟</label>
             <input className="form-input" value={form.referral_source}
-              onChange={(e) => set('referral_source', e.target.value)} placeholder="اختياري" />
+              onChange={(e) => set('referral_source', e.target.value)} placeholder="" />
           </div>
 
           <button type="submit" className="btn btn-primary btn-full" disabled={loading}>

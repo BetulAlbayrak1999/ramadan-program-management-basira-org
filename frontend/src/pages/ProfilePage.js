@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
@@ -10,6 +11,7 @@ export default function ProfilePage() {
   const [form, setForm] = useState({ full_name: user?.full_name, phone: user?.phone, country: user?.country, age: user?.age });
   const [pwdForm, setPwdForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [loading, setLoading] = useState(false);
+  const [showPwd, setShowPwd] = useState({ current: false, new: false, confirm: false });
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -121,22 +123,43 @@ export default function ProfilePage() {
           <div>
             <div className="form-group">
               <label className="form-label">كلمة المرور الحالية</label>
-              <input type="password" className="form-input" dir="ltr"
-                value={pwdForm.current_password}
-                onChange={(e) => setPwdForm((f) => ({ ...f, current_password: e.target.value }))} />
+              <div style={{ position: 'relative' }}>
+                <input type={showPwd.current ? 'text' : 'password'} className="form-input" dir="ltr"
+                  style={{ paddingLeft: '2.5rem' }}
+                  value={pwdForm.current_password}
+                  onChange={(e) => setPwdForm((f) => ({ ...f, current_password: e.target.value }))} />
+                <button type="button" onClick={() => setShowPwd((s) => ({ ...s, current: !s.current }))}
+                  style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.25rem', display: 'flex' }}>
+                  {showPwd.current ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">كلمة المرور الجديدة</label>
-                <input type="password" className="form-input" dir="ltr"
-                  value={pwdForm.new_password}
-                  onChange={(e) => setPwdForm((f) => ({ ...f, new_password: e.target.value }))} />
+                <div style={{ position: 'relative' }}>
+                  <input type={showPwd.new ? 'text' : 'password'} className="form-input" dir="ltr"
+                    style={{ paddingLeft: '2.5rem' }}
+                    value={pwdForm.new_password}
+                    onChange={(e) => setPwdForm((f) => ({ ...f, new_password: e.target.value }))} />
+                  <button type="button" onClick={() => setShowPwd((s) => ({ ...s, new: !s.new }))}
+                    style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.25rem', display: 'flex' }}>
+                    {showPwd.new ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
               <div className="form-group">
                 <label className="form-label">تأكيد كلمة المرور</label>
-                <input type="password" className="form-input" dir="ltr"
-                  value={pwdForm.confirm_password}
-                  onChange={(e) => setPwdForm((f) => ({ ...f, confirm_password: e.target.value }))} />
+                <div style={{ position: 'relative' }}>
+                  <input type={showPwd.confirm ? 'text' : 'password'} className="form-input" dir="ltr"
+                    style={{ paddingLeft: '2.5rem' }}
+                    value={pwdForm.confirm_password}
+                    onChange={(e) => setPwdForm((f) => ({ ...f, confirm_password: e.target.value }))} />
+                  <button type="button" onClick={() => setShowPwd((s) => ({ ...s, confirm: !s.confirm }))}
+                    style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.25rem', display: 'flex' }}>
+                    {showPwd.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
             </div>
             <div className="btn-group">
