@@ -4,7 +4,7 @@ import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import {
   BarChart3, Star, TrendingUp, FileEdit, User, ClipboardList, Eye, X,
-  BookOpen, Heart, Building2, Moon, Sun, Gem, Headphones, BookMarked, Lightbulb, HeartHandshake,
+  BookOpen, Heart, Building2, Moon, Sun, Gem, Sparkles, Headphones, BookMarked, Lightbulb, HeartHandshake,
   Phone, Mail, Users,
 } from 'lucide-react';
 import Pagination, { paginate } from '../components/Pagination';
@@ -12,6 +12,7 @@ import Pagination, { paginate } from '../components/Pagination';
 const SCORE_FIELDS = [
   { key: 'quran', label: 'وِرد القرآن', icon: <BookOpen size={14} /> },
   { key: 'tadabbur', label: 'التدبر', icon: <BookMarked size={14} /> },
+  { key: 'adhkar', label: 'الأذكار', icon: <Sparkles size={14} /> },
   { key: 'duas', label: 'الأدعية', icon: <Heart size={14} /> },
   { key: 'taraweeh', label: 'صلاة التراويح', icon: <Building2 size={14} /> },
   { key: 'tahajjud', label: 'التهجد والوتر', icon: <Moon size={14} /> },

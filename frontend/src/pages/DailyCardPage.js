@@ -2,13 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import {
-  BookOpen, Heart, Building2, Moon, Sun, Gem,
+  BookOpen, Heart, Building2, Moon, Sun, Gem, Sparkles,
   Headphones, BookMarked, Lightbulb, HeartHandshake, Star, Save, X, CheckCircle, MessageCircle,
 } from 'lucide-react';
 
 const FIELDS = [
   { key: 'quran', label: 'وِرد القرآن', icon: <BookOpen size={16} /> },
   { key: 'tadabbur', label: 'التدبر', icon: <BookMarked size={16} /> },
+  { key: 'adhkar', label: 'الأذكار', icon: <Sparkles size={16} /> },
   { key: 'duas', label: 'الأدعية', icon: <Heart size={16} /> },
   { key: 'taraweeh', label: 'صلاة التراويح', icon: <Building2 size={16} /> },
   { key: 'tahajjud', label: 'التهجد والوتر', icon: <Moon size={16} /> },
@@ -20,7 +21,7 @@ const FIELDS = [
   { key: 'extra_work', label: 'عمل إضافي', icon: <Star size={16} /> },
 ];
 
-const RAMADAN_START = '2026-01-19';
+const RAMADAN_START = '2026-02-19';
 const RAMADAN_END = '2026-03-19';
 
 function formatDate(d) {
@@ -29,7 +30,7 @@ function formatDate(d) {
 
 // Anchor: 19 Feb 2026 = 1 Ramadan 1447 (Turkey observation)
 const SHABAN_START = new Date(2026, 0, 21);  // 1 Sha'ban 1447
-const RAMADAN_START_DATE = new Date(2026, 2, 19); // 1 Ramadan 1447
+const RAMADAN_START_DATE = new Date(2026, 1, 19); // 1 Ramadan 1447
 const SHAWWAL_START = new Date(2026, 2, 20); // 1 Shawwal 1447
 
 function getHijriInfo(d) {

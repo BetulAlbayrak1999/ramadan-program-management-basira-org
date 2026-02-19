@@ -135,6 +135,11 @@ def on_startup():
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE daily_cards ADD COLUMN tadabbur DOUBLE PRECISION DEFAULT 0"))
 
+    # Migrate: add adhkar column to daily_cards if missing
+    if "adhkar" not in daily_card_columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE daily_cards ADD COLUMN adhkar DOUBLE PRECISION DEFAULT 0"))
+
     db = SessionLocal()
     try:
         if not db.query(SiteSettings).first():
