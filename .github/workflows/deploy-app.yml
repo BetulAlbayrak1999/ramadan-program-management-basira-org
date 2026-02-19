@@ -1,0 +1,106 @@
+name: Deploy Application to Production
+
+on:
+  push:
+    branches:
+    - master
+    paths-ignore:
+    - '**.md'
+    - '.github/**'
+    - 'devops/postgresql/**'
+  workflow_dispatch:
+
+
+jobs:
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Deploy Application via SSH
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << 'ENDSSH'
+          set -e  # Exit on any error
+          
+          echo "================================================"
+          echo "Starting Ramadan Program Management Deployment"
+          echo "Time: $(date)"
+          echo "================================================"
+          
+          # Navigate to project directory
+          cd /opt/ramadan-program/ramadan-program-management-basira-org || exit 1
+          
+          echo "📥 Pulling latest code from master branch..."
+          git fetch origin master
+          git checkout master
+          git pull origin master
+          
+          echo "📝 Creating .env file..."
+          # Create .env file for application with all required variables
+          cat > .env <<'ENVEOF'
+        # Database Configuration
+        DATABASE_URL=${{ secrets.DATABASE_URL }}
+        POSTGRES_DB=${{ vars.POSTGRES_DB || 'ramadan_db' }}
+
+        # JWT Configuration
+        JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+        JWT_ACCESS_TOKEN_EXPIRES=${{ vars.JWT_ACCESS_TOKEN_EXPIRES || '2592000' }}
+
+        # Email Configuration
+        MAIL_SERVER=${{ vars.MAIL_SERVER || 'smtp.gmail.com' }}
+        MAIL_PORT=${{ vars.MAIL_PORT || '587' }}
+        MAIL_USE_TLS=${{ vars.MAIL_USE_TLS || 'True' }}
+        MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
+        MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+
+        # Super Admin
+        SUPER_ADMIN_EMAIL=${{ secrets.SUPER_ADMIN_EMAIL }}
+        SUPER_ADMIN_PASSWORD=${{ secrets.SUPER_ADMIN_PASSWORD }}
+
+        # Application Settings
+        ENABLE_EMAIL_NOTIFICATIONS=${{ vars.ENABLE_EMAIL_NOTIFICATIONS || 'True' }}
+        ENVEOF
+          
+          echo "🔒 Setting .env permissions..."
+          chmod 600 .env
+          
+          echo "🐳 Building and deploying with Docker Compose..."
+          docker compose up -d --build --force-recreate
+          
+          echo "⏳ Waiting for application to be healthy..."
+          sleep 10
+          
+          echo "🏥 Checking application health..."
+          if docker ps | grep -q "ramadan_app"; then
+            echo "✅ Container is running"
+            docker logs ramadan_app --tail 20
+          else
+            echo "❌ Container failed to start"
+            docker logs ramadan_app --tail 50
+            exit 1
+          fi
+          
+          echo "================================================"
+          echo "✅ Deployment completed successfully!"
+          echo "Time: $(date)"
+          echo "================================================"
+        ENDSSH
+
+    - name: Notify Deployment Status
+      if: always()
+      run: |
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "✅ Deployment succeeded"
+        else
+          echo "❌ Deployment failed"
+          exit 1
+        fi

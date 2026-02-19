@@ -1,0 +1,157 @@
+name: Deploy PostgreSQL Database (Manual Only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy-postgres" to confirm database deployment'
+        required: true
+        type: string
+      recreate_volumes:
+        description: 'Recreate Docker volumes? (WARNING: This will DELETE all data!)'
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  deploy:
+    name: Deploy PostgreSQL
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Validate Confirmation
+      run: |
+        if [ "${{ github.event.inputs.confirm }}" != "deploy-postgres" ]; then
+          echo "❌ Deployment cancelled: confirmation text does not match"
+          exit 1
+        fi
+        echo "✅ Confirmation validated"
+
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Deploy PostgreSQL via SSH
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << 'ENDSSH'
+          set -e  # Exit on any error
+          
+          echo "================================================"
+          echo "Starting PostgreSQL Database Deployment"
+          echo "Time: $(date)"
+          echo "Recreate Volumes: ${{ github.event.inputs.recreate_volumes }}"
+          echo "================================================"
+          
+          # Navigate to project directory
+          cd /opt/ramadan-program/ramadan-program-management-basira-org || exit 1
+          
+          echo "📥 Pulling latest code from master branch..."
+          git fetch origin master
+          git checkout master
+          git pull origin master
+          
+          # Navigate to devops directory
+          cd devops || exit 1
+          
+          # Stop existing PostgreSQL container if running
+          echo "🛑 Stopping existing PostgreSQL container..."
+          docker compose -f docker-compose.postgres.yml down || true
+          
+          # Recreate volumes if requested
+          if [ "${{ github.event.inputs.recreate_volumes }}" == "true" ]; then
+            echo "⚠️  WARNING: Recreating volumes - ALL DATA WILL BE LOST!"
+            read -p "Are you sure? This will delete all data. Press Ctrl+C to cancel, or Enter to continue..."
+            
+            echo "🗑️  Removing old volumes..."
+            docker volume rm ramadan_postgres_data ramadan_postgres_logs || true
+            
+            echo "📦 Creating new volumes..."
+            docker volume create ramadan_postgres_logs
+            docker volume create ramadan_postgres_data
+            
+            echo "🔧 Setting volume permissions..."
+            PG_UID=$(docker run --rm postgres:16-alpine id -u postgres)
+            PG_GID=$(docker run --rm postgres:16-alpine id -g postgres)
+            echo "PostgreSQL UID=$PG_UID GID=$PG_GID"
+            
+            docker run --rm -u 0:0 \
+              -v ramadan_postgres_data:/var/lib/postgresql/data \
+              -v ramadan_postgres_logs:/var/log/postgresql \
+              alpine sh -c "chown -R $PG_UID:$PG_GID /var/lib/postgresql/data /var/log/postgresql && \
+                            chmod 700 /var/lib/postgresql/data && \
+                            chmod 750 /var/log/postgresql"
+            
+            echo "✅ Volumes created and permissions set"
+          else
+            echo "ℹ️  Using existing volumes (no data loss)"
+          fi
+          
+          echo "📝 Creating .env file for PostgreSQL..."
+          # Create .env file for PostgreSQL
+          cat > .env <<'ENVEOF'
+        # PostgreSQL Configuration
+        POSTGRES_DB=${{ vars.POSTGRES_DB || 'ramadan_db' }}
+        POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+        APP_USER_PASSWORD=${{ secrets.APP_USER_PASSWORD }}
+        MONITOR_USER_PASSWORD=${{ secrets.MONITOR_USER_PASSWORD }}
+        ENVEOF
+          
+          echo "🔒 Setting .env permissions..."
+          chmod 600 .env
+          
+          echo "🐳 Starting PostgreSQL with Docker Compose..."
+          docker compose -f docker-compose.postgres.yml up -d
+          
+          echo "⏳ Waiting for PostgreSQL to be ready..."
+          sleep 15
+          
+          echo "🏥 Checking PostgreSQL health..."
+          if docker ps | grep -q "ramadan_postgres"; then
+            echo "✅ PostgreSQL container is running"
+            
+            # Wait for PostgreSQL to be fully ready
+            echo "⏳ Waiting for PostgreSQL to accept connections..."
+            for i in {1..30}; do
+              if docker exec ramadan_postgres pg_isready -U postgres -d ramadan_db > /dev/null 2>&1; then
+                echo "✅ PostgreSQL is ready and accepting connections"
+                break
+              fi
+              echo "Waiting... ($i/30)"
+              sleep 2
+            done
+            
+            # Show last 30 lines of logs
+            echo "📋 PostgreSQL logs:"
+            docker logs ramadan_postgres --tail 30
+            
+            # Show database users (excluding password hashes)
+            echo ""
+            echo "👥 Database users:"
+            docker exec ramadan_postgres psql -U postgres -d ramadan_db -c "\du" || true
+            
+          else
+            echo "❌ PostgreSQL container failed to start"
+            docker logs ramadan_postgres --tail 50
+            exit 1
+          fi
+          
+          echo "================================================"
+          echo "✅ PostgreSQL deployment completed successfully!"
+          echo "Time: $(date)"
+          echo "================================================"
+        ENDSSH
+
+    - name: Notify Deployment Status
+      if: always()
+      run: |
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "✅ PostgreSQL deployment succeeded"
+        else
+          echo "❌ PostgreSQL deployment failed"
+          exit 1
+        fi
