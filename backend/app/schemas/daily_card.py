@@ -6,6 +6,7 @@ class DailyCardCreate(BaseModel):
     date: date
     quran: float = Field(default=0, ge=0, le=10)
     tadabbur: float = Field(default=0, ge=0, le=10)
+    adhkar: float = Field(default=0, ge=0, le=10)
     duas: float = Field(default=0, ge=0, le=10)
     taraweeh: float = Field(default=0, ge=0, le=10)
     tahajjud: float = Field(default=0, ge=0, le=10)
@@ -23,6 +24,7 @@ def card_to_response(card) -> dict:
     return {
         "id": card.id,
         "tadabbur": card.tadabbur,
+        "adhkar": card.adhkar,
         "user_id": card.user_id,
         "date": card.date.isoformat(),
         "quran": card.quran,

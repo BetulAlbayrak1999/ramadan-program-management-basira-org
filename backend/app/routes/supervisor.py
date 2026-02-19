@@ -395,6 +395,7 @@ def export_cards(
                 "التاريخ": c.date.isoformat(),
                 "وِرد القرآن": c.quran,
                 "التدبر": c.tadabbur,
+                "الأذكار": c.adhkar,
                 "الأدعية": c.duas,
                 "صلاة التراويح": c.taraweeh,
                 "التهجد والوتر": c.tahajjud,

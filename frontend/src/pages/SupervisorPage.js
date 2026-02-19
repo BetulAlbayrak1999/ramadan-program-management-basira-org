@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import {
   Eye, ClipboardList, Trophy, Save, Users,
-  BookOpen, Heart, Building2, Moon, Sun, Gem, User,
+  BookOpen, Heart, Building2, Moon, Sun, Gem, Sparkles, User,
   Headphones, BookMarked, Lightbulb, HeartHandshake, Star, X, Filter,
   Phone, Mail, MapPin, Calendar, FileDown, Search, Plus, Trash2, CheckCircle, XCircle, MessageCircle,
 } from 'lucide-react';
@@ -13,6 +13,7 @@ import Pagination, { paginate } from '../components/Pagination';
 const SCORE_FIELDS = [
   { key: 'quran', label: 'وِرد القرآن', icon: <BookOpen size={14} /> },
   { key: 'tadabbur', label: 'التدبر', icon: <BookMarked size={14} /> },
+  { key: 'adhkar', label: 'الأذكار', icon: <Sparkles size={14} /> },
   { key: 'duas', label: 'الأدعية', icon: <Heart size={14} /> },
   { key: 'taraweeh', label: 'صلاة التراويح', icon: <Building2 size={14} /> },
   { key: 'tahajjud', label: 'التهجد والوتر', icon: <Moon size={14} /> },

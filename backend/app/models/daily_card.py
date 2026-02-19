@@ -16,6 +16,7 @@ class DailyCard(Base):
     # Score fields (0-10 each, decimals allowed)
     quran = Column(Float, default=0)
     tadabbur = Column(Float, default=0)
+    adhkar = Column(Float, default=0)
     duas = Column(Float, default=0)
     taraweeh = Column(Float, default=0)
     tahajjud = Column(Float, default=0)
@@ -38,7 +39,7 @@ class DailyCard(Base):
     __table_args__ = (UniqueConstraint("user_id", "date", name="unique_user_date"),)
 
     SCORE_FIELDS = [
-        "quran", "tadabbur","duas", "taraweeh", "tahajjud", "duha",
+        "quran", "tadabbur", "adhkar", "duas", "taraweeh", "tahajjud", "duha",
         "rawatib", "main_lesson", 
         "enrichment_lesson", "charity_worship", "extra_work",
     ]
