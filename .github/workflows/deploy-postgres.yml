@@ -50,18 +50,18 @@ jobs:
           cd /opt/ramadan-program/ramadan-program-management-basira-org || exit 1
           
           echo "📥 Pulling latest code from master branch..."
-          echo "Running: sudo /usr/bin/git reset --hard"
-          sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org reset --hard
-          echo "Running: sudo /usr/bin/git clean -fd"
-          sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org clean -fd
-          echo "Running: sudo /usr/bin/git fetch origin master"
-          sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org fetch origin master
+          echo "Running: git reset --hard"
+          git reset --hard
+          echo "Running: git clean -fd"
+          git clean -fd
+          echo "Running: git fetch origin master"
+          git fetch origin master
           echo "✅ Fetch completed"
-          echo "Running: sudo /usr/bin/git checkout master"
-          sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org checkout master
+          echo "Running: git checkout master"
+          git checkout master
           echo "✅ Checkout completed"
-          echo "Running: sudo /usr/bin/git pull origin master"
-          sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org pull origin master
+          echo "Running: git pull origin master"
+          git pull origin master
           echo "✅ Pull completed"
           
           # Navigate to devops directory
@@ -69,7 +69,7 @@ jobs:
           
           # Stop existing PostgreSQL container if running
           echo "🛑 Stopping existing PostgreSQL container..."
-          sudo /usr/bin/docker compose -f /opt/ramadan-program/ramadan-program-management-basira-org/devops/docker-compose.postgres.yml down || true
+          docker compose -f /opt/ramadan-program/ramadan-program-management-basira-org/devops/docker-compose.postgres.yml down || true
           
           # Recreate volumes if requested
           if [ "${{ github.event.inputs.recreate_volumes }}" == "true" ]; then
@@ -77,18 +77,18 @@ jobs:
             read -p "Are you sure? This will delete all data. Press Ctrl+C to cancel, or Enter to continue..."
             
             echo "🗑️  Removing old volumes..."
-            sudo /usr/bin/docker volume rm ramadan_postgres_data ramadan_postgres_logs || true
+            docker volume rm ramadan_postgres_data ramadan_postgres_logs || true
             
             echo "📦 Creating new volumes..."
-            sudo /usr/bin/docker volume create ramadan_postgres_logs
-            sudo /usr/bin/docker volume create ramadan_postgres_data
+            docker volume create ramadan_postgres_logs
+            docker volume create ramadan_postgres_data
             
             echo "🔧 Setting volume permissions..."
-            PG_UID=$(sudo /usr/bin/docker run --rm postgres:16-alpine id -u postgres)
-            PG_GID=$(sudo /usr/bin/docker run --rm postgres:16-alpine id -g postgres)
+            PG_UID=$(docker run --rm postgres:16-alpine id -u postgres)
+            PG_GID=$(docker run --rm postgres:16-alpine id -g postgres)
             echo "PostgreSQL UID=$PG_UID GID=$PG_GID"
             
-            sudo /usr/bin/docker run --rm -u 0:0 \
+            docker run --rm -u 0:0 \
               -v ramadan_postgres_data:/var/lib/postgresql/data \
               -v ramadan_postgres_logs:/var/log/postgresql \
               alpine sh -c "chown -R $PG_UID:$PG_GID /var/lib/postgresql/data /var/log/postgresql && \
@@ -112,27 +112,27 @@ jobs:
           
           
           echo "🐳 Starting PostgreSQL with Docker Compose..."
-          echo "Running: sudo /usr/bin/docker compose -f /opt/ramadan-program/ramadan-program-management-basira-org/devops/docker-compose.postgres.yml up -d"
-          sudo /usr/bin/docker compose -f /opt/ramadan-program/ramadan-program-management-basira-org/devops/docker-compose.postgres.yml up -d
+          echo "Running: docker compose -f /opt/ramadan-program/ramadan-program-management-basira-org/devops/docker-compose.postgres.yml up -d"
+          docker compose -f /opt/ramadan-program/ramadan-program-management-basira-org/devops/docker-compose.postgres.yml up -d
           echo "✅ Docker compose command executed"
           
           echo "📋 Docker compose status:"
-          sudo /usr/bin/docker compose -f /opt/ramadan-program/ramadan-program-management-basira-org/devops/docker-compose.postgres.yml ps
+          docker compose -f /opt/ramadan-program/ramadan-program-management-basira-org/devops/docker-compose.postgres.yml ps
           
           echo "⏳ Waiting for PostgreSQL to be ready..."
           sleep 15
           
           echo "📊 Current running containers:"
-          sudo /usr/bin/docker ps
+          docker ps
           
           echo "🏥 Checking PostgreSQL health..."
-          if sudo /usr/bin/docker ps | grep -q "ramadan_postgres"; then
+          if docker ps | grep -q "ramadan_postgres"; then
             echo "✅ PostgreSQL container is running"
             
             # Wait for PostgreSQL to be fully ready
             echo "⏳ Waiting for PostgreSQL to accept connections..."
             for i in {1..30}; do
-              if sudo /usr/bin/docker exec ramadan_postgres pg_isready -U postgres -d ramadan_db > /dev/null 2>&1; then
+              if docker exec ramadan_postgres pg_isready -U postgres -d ramadan_db > /dev/null 2>&1; then
                 echo "✅ PostgreSQL is ready and accepting connections"
                 break
               fi
@@ -142,16 +142,16 @@ jobs:
             
             # Show last 30 lines of logs
             echo "📋 PostgreSQL logs:"
-            sudo /usr/bin/docker logs ramadan_postgres --tail 30
+            docker logs ramadan_postgres --tail 30
             
             # Show database users (excluding password hashes)
             echo ""
             echo "👥 Database users:"
-            sudo /usr/bin/docker exec ramadan_postgres psql -U postgres -d ramadan_db -c "\du" || true
+            docker exec ramadan_postgres psql -U postgres -d ramadan_db -c "\du" || true
             
           else
             echo "❌ PostgreSQL container failed to start"
-            sudo /usr/bin/docker logs ramadan_postgres --tail 50
+            docker logs ramadan_postgres --tail 50
             exit 1
           fi
           

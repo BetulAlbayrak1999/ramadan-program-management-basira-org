@@ -28,7 +28,7 @@ jobs:
 
     - name: Deploy Application via SSH
       run: |
-        ssh -tt -o  StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << ENDSSH
+        ssh -o  StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << ENDSSH
           echo "================================================"
           echo "Starting Ramadan Program Management Deployment"
           echo "Time: $(date)"
