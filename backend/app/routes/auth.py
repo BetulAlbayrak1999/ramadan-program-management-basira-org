@@ -94,8 +94,9 @@ def login(data: UserLogin, db: Session = Depends(get_db)):
 
 @router.get("/me")
 def get_me(user: User = Depends(get_current_user)):
-    """Get current user profile."""
-    return {"user": user_to_response(user)}
+    """Get current user profile. Returns a refreshed token to extend the session."""
+    new_token = create_access_token(user.id)
+    return {"user": user_to_response(user), "token": new_token}
 
 
 @router.put("/profile")

@@ -24,7 +24,7 @@ app.add_middleware(
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
-        content={"error": exc.detail},
+        content={"error": exc.detail, "detail": exc.detail},
     )
 
 
@@ -44,6 +44,12 @@ def on_startup():
     if "member_id" not in columns:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE users ADD COLUMN member_id INTEGER UNIQUE"))
+
+    # Migrate: add updated_at column to halqas if missing
+    halqa_columns = [c["name"] for c in inspector.get_columns("halqas")]
+    if "updated_at" not in halqa_columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE halqas ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
 
     db = SessionLocal()
     try:

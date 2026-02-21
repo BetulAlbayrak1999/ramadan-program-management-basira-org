@@ -29,4 +29,5 @@ def halqa_to_response(halqa) -> dict:
         "male_count": len([m for m in active_members if m.gender in male_values]),
         "female_count": len([m for m in active_members if m.gender not in male_values]),
         "created_at": halqa.created_at.isoformat() if halqa.created_at else None,
+        "updated_at": halqa.updated_at.isoformat() if halqa.updated_at else None,
     }

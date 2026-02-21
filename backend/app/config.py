@@ -7,7 +7,7 @@ class Settings(BaseSettings):
 
     # JWT
     JWT_SECRET_KEY: str = "change-me"
-    JWT_ACCESS_TOKEN_EXPIRES: int = 86400  # seconds
+    JWT_ACCESS_TOKEN_EXPIRES: int = 2592000  # 30 days in seconds
     JWT_ALGORITHM: str = "HS256"
 
     # Mail

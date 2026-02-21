@@ -13,6 +13,7 @@ class Halqa(Base):
     name = Column(String(200), nullable=False, unique=True)
     supervisor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     supervisor = relationship(

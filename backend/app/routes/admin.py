@@ -253,11 +253,22 @@ def create_halqa(
     if db.query(Halqa).filter_by(name=name).first():
         raise HTTPException(400, detail="اسم الحلقة موجود مسبقاً")
 
+    # Remove supervisor from any other halqa they currently supervise
+    old_halqa_name = None
+    if data.supervisor_id:
+        old_halqa = db.query(Halqa).filter_by(supervisor_id=data.supervisor_id).first()
+        if old_halqa:
+            old_halqa_name = old_halqa.name
+            old_halqa.supervisor_id = None
+
     halqa = Halqa(name=name, supervisor_id=data.supervisor_id)
     db.add(halqa)
     db.commit()
     db.refresh(halqa)
-    return {"message": "تم إنشاء الحلقة", "halqa": halqa_to_response(halqa)}
+    msg = "تم إنشاء الحلقة"
+    if old_halqa_name:
+        msg += f" (تم إزالة المشرف من حلقة «{old_halqa_name}»)"
+    return {"message": msg, "halqa": halqa_to_response(halqa)}
 
 
 @router.put("/halqa/{halqa_id}")
@@ -274,12 +285,25 @@ def update_halqa(
 
     if data.name is not None:
         halqa.name = data.name
+
+    # Remove supervisor from any other halqa they currently supervise
+    old_halqa_name = None
     if data.supervisor_id is not None:
+        if data.supervisor_id and data.supervisor_id != halqa.supervisor_id:
+            old_halqa = db.query(Halqa).filter(
+                Halqa.supervisor_id == data.supervisor_id, Halqa.id != halqa_id
+            ).first()
+            if old_halqa:
+                old_halqa_name = old_halqa.name
+                old_halqa.supervisor_id = None
         halqa.supervisor_id = data.supervisor_id
 
     db.commit()
     db.refresh(halqa)
-    return {"message": "تم تحديث الحلقة", "halqa": halqa_to_response(halqa)}
+    msg = "تم تحديث الحلقة"
+    if old_halqa_name:
+        msg += f" (تم إزالة المشرف من حلقة «{old_halqa_name}»)"
+    return {"message": msg, "halqa": halqa_to_response(halqa)}
 
 
 @router.post("/halqa/{halqa_id}/assign-members")

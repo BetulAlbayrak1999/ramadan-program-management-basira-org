@@ -138,6 +138,17 @@ export default function AdminHalqasPage() {
   });
   const genderLabel = (g) => ['male', 'ذكر'].includes(g) ? 'ذكر' : 'أنثى';
 
+  // Check if a supervisor already supervises another halqa (excluding the one being edited)
+  const getSupConflict = (supId, excludeHalqaId) => {
+    if (!supId) return null;
+    const sup = supervisors.find((s) => s.id === Number(supId));
+    if (!sup || !sup.supervised_halqa_name) return null;
+    // If editing, exclude the current halqa
+    const currentHalqa = halqas.find((h) => h.id === excludeHalqaId);
+    if (currentHalqa && currentHalqa.supervisor_id === Number(supId)) return null;
+    return sup.supervised_halqa_name;
+  };
+
   // Filter, sort, and paginate users for assign modal
 
   const filteredAssignUsers = users
@@ -157,7 +168,9 @@ export default function AdminHalqasPage() {
   const assignPaginated = paginate(filteredAssignUsers, assignPage);
 
   // Main page: halqa grid filtering
-  const filteredHalqas = halqas.filter((h) => !halqaSearch || h.name.includes(halqaSearch));
+  const filteredHalqas = halqas
+    .filter((h) => !halqaSearch || h.name.includes(halqaSearch))
+    .sort((a, b) => (b.updated_at || b.created_at || '').localeCompare(a.updated_at || a.created_at || ''));
   const unassignedCount = users.filter((u) => !u.halqa_id).length;
 
   // Main page: participants list filtering
@@ -361,8 +374,14 @@ export default function AdminHalqasPage() {
                       background: String(s.id) === newSupervisor ? 'var(--primary)' : 'transparent',
                       color: String(s.id) === newSupervisor ? '#fff' : 'var(--text-primary)',
                       borderBottom: '1px solid var(--border)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     }}>
-                    {s.full_name} — {genderLabel(s.gender)}
+                    <span>{s.full_name} — {genderLabel(s.gender)}</span>
+                    {s.supervised_halqa_name && (
+                      <span style={{ fontSize: '0.68rem', color: String(s.id) === newSupervisor ? 'rgba(255,255,255,0.8)' : 'var(--gold)', fontWeight: 600 }}>
+                        مشرف: {s.supervised_halqa_name}
+                      </span>
+                    )}
                   </div>
                 ))}
                 {filteredSupervisors.length === 0 && (
@@ -372,6 +391,16 @@ export default function AdminHalqasPage() {
                 )}
               </div>
             </div>
+            {getSupConflict(newSupervisor, null) && (
+              <div style={{
+                background: 'var(--gold-light)', borderRadius: 8, padding: '0.5rem 0.75rem',
+                marginBottom: '0.75rem', borderRight: '3px solid var(--gold)', fontSize: '0.82rem',
+              }}>
+                <strong style={{ color: 'var(--gold)' }}>تنبيه:</strong>{' '}
+                هذا المشرف مسؤول حالياً عن حلقة «{getSupConflict(newSupervisor, null)}».
+                سيتم إزالته منها وتعيينه للحلقة الجديدة.
+              </div>
+            )}
             <div className="btn-group">
               <button className="btn btn-primary" onClick={createHalqa}>إنشاء</button>
               <button className="btn btn-secondary" onClick={() => setShowCreate(false)}>إلغاء</button>
@@ -442,9 +471,16 @@ export default function AdminHalqasPage() {
                         borderRight: isOriginal && !isSelected ? '3px solid var(--gold)' : 'none',
                       }}>
                       <span>{s.full_name} — {genderLabel(s.gender)}</span>
-                      {isOriginal && !isSelected && (
-                        <span style={{ fontSize: '0.68rem', color: 'var(--gold)', fontWeight: 700 }}>الحالي</span>
-                      )}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        {s.supervised_halqa_name && !isOriginal && (
+                          <span style={{ fontSize: '0.68rem', color: isSelected ? 'rgba(255,255,255,0.8)' : 'var(--gold)', fontWeight: 600 }}>
+                            مشرف: {s.supervised_halqa_name}
+                          </span>
+                        )}
+                        {isOriginal && !isSelected && (
+                          <span style={{ fontSize: '0.68rem', color: 'var(--gold)', fontWeight: 700 }}>الحالي</span>
+                        )}
+                      </span>
                     </div>
                   );
                 })}
@@ -455,6 +491,16 @@ export default function AdminHalqasPage() {
                 )}
               </div>
             </div>
+            {getSupConflict(editHalqa.supervisor_id, editHalqa.id) && (
+              <div style={{
+                background: 'var(--gold-light)', borderRadius: 8, padding: '0.5rem 0.75rem',
+                marginBottom: '0.75rem', borderRight: '3px solid var(--gold)', fontSize: '0.82rem',
+              }}>
+                <strong style={{ color: 'var(--gold)' }}>تنبيه:</strong>{' '}
+                هذا المشرف مسؤول حالياً عن حلقة «{getSupConflict(editHalqa.supervisor_id, editHalqa.id)}».
+                سيتم إزالته منها وتعيينه لهذه الحلقة.
+              </div>
+            )}
             <div className="btn-group">
               <button className="btn btn-primary" onClick={updateHalqa}>حفظ</button>
               <button className="btn btn-secondary" onClick={() => setEditHalqa(null)}>إلغاء</button>

@@ -89,7 +89,12 @@ export default function AdminUsersPage() {
 
   const saveUserEdit = async () => {
     try {
-      await api.put(`/admin/user/${selectedUser.id}`, editForm);
+      const payload = { ...editForm };
+      if (payload.halqa_id === '' || payload.halqa_id === null) payload.halqa_id = null;
+      else payload.halqa_id = Number(payload.halqa_id);
+      if (payload.age === '' || payload.age === null) payload.age = null;
+      else payload.age = Number(payload.age);
+      await api.put(`/admin/user/${selectedUser.id}`, payload);
       toast.success('تم تحديث البيانات');
       setSelectedUser(null);
       fetchUsers();

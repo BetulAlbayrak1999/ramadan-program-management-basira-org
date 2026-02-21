@@ -20,8 +20,8 @@ export default function LoginPage() {
       toast.success('تم تسجيل الدخول بنجاح');
       navigate('/dashboard');
     } catch (err) {
-      const detail = err.response?.data?.detail;
-      toast.error(typeof detail === 'string' ? detail : 'حدث خطأ في تسجيل الدخول');
+      const msg = err.response?.data?.error || err.response?.data?.detail;
+      toast.error(typeof msg === 'string' ? msg : 'حدث خطأ في تسجيل الدخول');
     } finally {
       setLoading(false);
     }

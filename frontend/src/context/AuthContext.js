@@ -11,7 +11,10 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('token');
     if (token) {
       api.get('/auth/me')
-        .then((res) => setUser(res.data.user))
+        .then((res) => {
+          setUser(res.data.user);
+          if (res.data.token) localStorage.setItem('token', res.data.token);
+        })
         .catch(() => localStorage.removeItem('token'))
         .finally(() => setLoading(false));
     } else {
