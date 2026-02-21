@@ -28,7 +28,7 @@ jobs:
 
     - name: Deploy Application via SSH
       run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << 'ENDSSH'          
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << 'EOF'
           echo "================================================"
           echo "Starting Ramadan Program Management Deployment"
           echo "Time: $(date)"
@@ -52,16 +52,16 @@ jobs:
           cat > .env <<-'ENVEOF'
         # Database Configuration
         DATABASE_URL=${{ secrets.DATABASE_URL }}
-        POSTGRES_DB=${{ vars.POSTGRES_DB || 'ramadan_db' }}
+        POSTGRES_DB=${{ vars.POSTGRES_DB }}
 
         # JWT Configuration
         JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
-        JWT_ACCESS_TOKEN_EXPIRES=${{ vars.JWT_ACCESS_TOKEN_EXPIRES || '2592000' }}
+        JWT_ACCESS_TOKEN_EXPIRES=${{ vars.JWT_ACCESS_TOKEN_EXPIRES }}
 
         # Email Configuration
-        MAIL_SERVER=${{ vars.MAIL_SERVER || 'smtp.gmail.com' }}
-        MAIL_PORT=${{ vars.MAIL_PORT || '587' }}
-        MAIL_USE_TLS=${{ vars.MAIL_USE_TLS || 'True' }}
+        MAIL_SERVER=${{ vars.MAIL_SERVER }}
+        MAIL_PORT=${{ vars.MAIL_PORT  }}
+        MAIL_USE_TLS=${{ vars.MAIL_USE_TLS }}
         MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
         MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
 
@@ -70,7 +70,7 @@ jobs:
         SUPER_ADMIN_PASSWORD=${{ secrets.SUPER_ADMIN_PASSWORD }}
 
         # Application Settings
-        ENABLE_EMAIL_NOTIFICATIONS=${{ vars.ENABLE_EMAIL_NOTIFICATIONS || 'True' }}
+        ENABLE_EMAIL_NOTIFICATIONS=${{ vars.ENABLE_EMAIL_NOTIFICATIONS }}
         ENVEOF
           
           echo "🔒 Setting .env permissions..."
@@ -99,12 +99,12 @@ jobs:
           echo "================================================"
         ENDSSH
 
-    - name: Notify Deployment Status
-      if: always()
-      run: |
-        if [ "${{ job.status }}" == "success" ]; then
-          echo "✅ Deployment succeeded"
-        else
-          echo "❌ Deployment failed"
-          exit 1
-        fi
+    # - name: Notify Deployment Status
+    #   if: always()
+    #   run: |
+    #     if [ "${{ job.status }}" == "success" ]; then
+    #       echo "✅ Deployment succeeded"
+    #     else
+    #       echo "❌ Deployment failed"
+    #       exit 1
+    #     fi

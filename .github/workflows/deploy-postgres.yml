@@ -38,7 +38,7 @@ jobs:
 
     - name: Deploy PostgreSQL via SSH
       run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << 'ENDSSH'
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << 'EOF'
           
           echo "================================================"
           echo "Starting PostgreSQL Database Deployment"
@@ -50,12 +50,17 @@ jobs:
           cd /opt/ramadan-program/ramadan-program-management-basira-org || exit 1
           
           echo "📥 Pulling latest code from master branch..."
+          echo "Running: sudo /usr/bin/git reset --hard"
           sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org reset --hard
+          echo "Running: sudo /usr/bin/git clean -fd"
           sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org clean -fd
+          echo "Running: sudo /usr/bin/git fetch origin master"
           sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org fetch origin master
           echo "✅ Fetch completed"
+          echo "Running: sudo /usr/bin/git checkout master"
           sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org checkout master
           echo "✅ Checkout completed"
+          echo "Running: sudo /usr/bin/git pull origin master"
           sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org pull origin master
           echo "✅ Pull completed"
           
@@ -99,7 +104,7 @@ jobs:
           # Create .env file for PostgreSQL
           cat > .env <<-'ENVEOF'
         # PostgreSQL Configuration
-        POSTGRES_DB=${{ vars.POSTGRES_DB || 'ramadan_db' }}
+        POSTGRES_DB=${{ vars.POSTGRES_DB}}
         POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
         APP_USER_PASSWORD=${{ secrets.APP_USER_PASSWORD }}
         MONITOR_USER_PASSWORD=${{ secrets.MONITOR_USER_PASSWORD }}
@@ -109,10 +114,18 @@ jobs:
           chmod 600 .env
           
           echo "🐳 Starting PostgreSQL with Docker Compose..."
+          echo "Running: sudo /usr/bin/docker compose -f /opt/ramadan-program/ramadan-program-management-basira-org/devops/docker-compose.postgres.yml up -d"
           sudo /usr/bin/docker compose -f /opt/ramadan-program/ramadan-program-management-basira-org/devops/docker-compose.postgres.yml up -d
+          echo "✅ Docker compose command executed"
+          
+          echo "📋 Docker compose status:"
+          sudo /usr/bin/docker compose -f /opt/ramadan-program/ramadan-program-management-basira-org/devops/docker-compose.postgres.yml ps
           
           echo "⏳ Waiting for PostgreSQL to be ready..."
           sleep 15
+          
+          echo "📊 Current running containers:"
+          sudo /usr/bin/docker ps
           
           echo "🏥 Checking PostgreSQL health..."
           if sudo /usr/bin/docker ps | grep -q "ramadan_postgres"; then
@@ -148,14 +161,14 @@ jobs:
           echo "✅ PostgreSQL deployment completed successfully!"
           echo "Time: $(date)"
           echo "================================================"
-        ENDSSH
+        EOF
 
-    - name: Notify Deployment Status
-      if: always()
-      run: |
-        if [ "${{ job.status }}" == "success" ]; then
-          echo "✅ PostgreSQL deployment succeeded"
-        else
-          echo "❌ PostgreSQL deployment failed"
-          exit 1
-        fi
+    # - name: Notify Deployment Status
+    #   if: always()
+    #   run: |
+    #     if [ "${{ job.status }}" == "success" ]; then
+    #       echo "✅ PostgreSQL deployment succeeded"
+    #     else
+    #       echo "❌ PostgreSQL deployment failed"
+    #       exit 1
+    #     fi
