@@ -39,11 +39,8 @@ jobs:
           echo "📥 Pulling latest code from master branch..."
           sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org reset --hard
           sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org clean -fd
-          sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org fetch origin master
-          echo "✅ Fetch completed"
           sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org checkout master
-          echo "✅ Checkout completed"
-          sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org pull origin master
+          sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org pull origin master          
           echo "✅ Pull completed"
           echo "📝 Creating .env file..."
           cat > .env << ENVEOF
