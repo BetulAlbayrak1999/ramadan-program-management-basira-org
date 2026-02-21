@@ -1,10 +1,25 @@
-# 🌙 المنصة الرمضانية — منصة إدارة ومتابعة البرنامج الرمضاني
+# Basira — Ramadan Program Management Platform
 
-منصة رقمية متكاملة لإدارة ومتابعة المشاركين في البرنامج الرمضاني.
+**المنصة الرمضانية (بصيرة)** — منصة رقمية متكاملة لإدارة ومتابعة المشاركين في البرنامج الرمضاني.
+
+Full-stack web application for managing Ramadan daily tracking programs. Participants fill a daily scorecard (11 categories, max 110 points), supervisors monitor their circles (halqas), and admins manage the entire program with analytics, bulk operations, and data import/export.
 
 ---
 
-## 📋 المتطلبات
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | Python 3.10+ / FastAPI / SQLAlchemy ORM |
+| **Database** | PostgreSQL 14+ |
+| **Frontend** | React 18 / React Router v6 / Axios |
+| **Auth** | JWT (python-jose) / bcrypt |
+| **UI** | Custom CSS (RTL Arabic) / Lucide React icons |
+| **Reports** | OpenPyXL (Excel) / CSV export & import |
+
+---
+
+## Prerequisites
 
 - **Python** 3.10+
 - **Node.js** 18+
@@ -12,194 +27,396 @@
 
 ---
 
-## 🚀 التثبيت والتشغيل
+## Getting Started
 
-### 1. قاعدة البيانات
+### 1. Clone the repository
 
 ```bash
-# إنشاء قاعدة البيانات
-sudo -u postgres psql
+git clone <repo-url>
+cd ramadan-program-management-basira
+```
+
+### 2. Database Setup
+
+```bash
+# Connect to PostgreSQL
+sudo -u postgres psql   # Linux/Mac
+# or: psql -U postgres  # Windows
+
+# Create database and user
 CREATE DATABASE ramadan_db;
 CREATE USER ramadan_user WITH PASSWORD 'your_password';
 GRANT ALL PRIVILEGES ON DATABASE ramadan_db TO ramadan_user;
 \q
 ```
 
-### 2. الباك إند (Backend)
+### 3. Backend Setup
 
 ```bash
 cd backend
 
-# إنشاء بيئة افتراضية
+# Create virtual environment
 python -m venv venv
-source venv/bin/activate   # Linux/Mac
-# venv\Scripts\activate    # Windows
+source venv/bin/activate       # Linux/Mac
+venv\Scripts\activate          # Windows
 
-# تثبيت المكتبات
+# Install dependencies
 pip install -r requirements.txt
 
-# إعداد ملف البيئة
-cp .env .env.local
-# عدّل .env بإعدادات قاعدة البيانات والبريد
-
-# تشغيل السيرفر
-python run.py
+# Configure environment
+cp .env.example .env
+# Edit .env with your database URL, JWT secret, email settings, and super admin credentials
 ```
 
-السيرفر يعمل على: `http://localhost:8000`
-
-### 3. الفرونت إند (Frontend)
+### 4. Frontend Setup
 
 ```bash
 cd frontend
 
-# تثبيت المكتبات
+# Install dependencies
 npm install
+```
 
-# تشغيل التطبيق
+### 5. Run the Application
+
+**Start the backend** (from `backend/` directory):
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Backend runs at: `http://localhost:8000`
+API docs (Swagger): `http://localhost:8000/docs`
+
+**Start the frontend** (from `frontend/` directory):
+
+```bash
 npm start
 ```
 
-التطبيق يعمل على: `http://localhost:3000`
+Frontend runs at: `http://localhost:3000`
 
 ---
 
-## ⚙️ إعداد ملف .env
+## Environment Variables
+
+Create a `.env` file in the `backend/` directory:
 
 ```env
+# Database
 DATABASE_URL=postgresql://ramadan_user:your_password@localhost:5432/ramadan_db
-JWT_SECRET_KEY=your-super-secret-key
-SUPER_ADMIN_EMAIL=admin@example.com
+
+# JWT
+JWT_SECRET_KEY=your-super-secret-jwt-key-change-this
+JWT_ACCESS_TOKEN_EXPIRES=2592000    # 30 days in seconds
+
+# Mail (for email notifications & password reset)
 MAIL_SERVER=smtp.gmail.com
 MAIL_PORT=587
 MAIL_USE_TLS=True
 MAIL_USERNAME=your-email@gmail.com
 MAIL_PASSWORD=your-app-password
+
+# Super Admin (auto-created on first startup)
+SUPER_ADMIN_EMAIL=admin@example.com
+SUPER_ADMIN_PASSWORD=Admin@123456
+
+# Settings
 ENABLE_EMAIL_NOTIFICATIONS=True
 ```
 
-> **مهم:** البريد المحدد في `SUPER_ADMIN_EMAIL` هو السوبر آدمن الأساسي. سجّل حساباً بهذا البريد ثم سيتم تفعيله تلقائياً كسوبر آدمن عند تسجيل الدخول.
+> **Important:** The email set in `SUPER_ADMIN_EMAIL` is automatically created as a super admin on first startup. If you register with this email, it will be auto-promoted to super admin upon login.
 
 ---
 
-## 👤 الفئات والصلاحيات
+## User Roles & Permissions
 
-| الفئة | الصلاحيات |
-|-------|-----------|
-| **مشارك** | تعبئة البطاقة، عرض الإحصائيات، الترتيب العام |
-| **مشرف** | كل صلاحيات المشارك + متابعة أعضاء الحلقة |
-| **سوبر آدمن** | كل الصلاحيات + إدارة المستخدمين والحلقات والتحليلات |
-
----
-
-## 📱 الميزات
-
-### للمشاركين
-- البطاقة الرمضانية اليومية (11 قسم × 10 نقاط)
-- تعديل بطاقات الأيام السابقة
-- إحصائيات يومية/أسبوعية/كلية
-- الترتيب العام (Leaderboard)
-
-### للمشرفين
-- ملخص يومي (من سلّم / لم يسلّم)
-- ملخص أسبوعي
-- عرض بطاقات كل مشارك
-
-### للسوبر آدمن
-- قبول/رفض طلبات التسجيل
-- إدارة الحلقات والمشرفين
-- تحليلات متقدمة مع فلاتر
-- تصدير/استيراد Excel وCSV
-- إعدادات إشعارات البريد
+| Role | Permissions |
+|------|------------|
+| **Participant** (مشارك) | Fill daily card, view own stats, see leaderboard |
+| **Supervisor** (مشرف) | All participant permissions + manage halqa members, view/edit member cards, daily tracking with WhatsApp reminders, export reports |
+| **Super Admin** (سوبر آدمن) | All permissions + manage users, halqas, supervisors, approve/reject registrations, analytics dashboard, bulk operations, import/export |
 
 ---
 
-## 🏗 هيكل المشروع
+## Features
+
+### Participants
+- Daily Ramadan scorecard (11 categories x 10 points = 110 max per day)
+- Edit cards for past days (within Ramadan period)
+- Personal statistics: today's score, overall percentage, total cards
+- General leaderboard
+- Profile management & password change
+
+### Supervisors
+- All participant features
+- View halqa members and their cards
+- Create/edit/delete cards for any member
+- Daily tracking: see who submitted and who didn't
+- WhatsApp reminder links for non-submitters (individual + group)
+- Period summary with date range filters
+- Weekly summary
+- Leaderboard (filtered by halqa)
+- Export halqa data to Excel/CSV
+
+### Super Admin
+- All supervisor features across all halqas
+- Registration approval/rejection workflow
+- User management: edit, activate, withdraw, change roles
+- Halqa management: create, edit, assign supervisors and members
+- Supervisor conflict detection (warns when reassigning a supervisor)
+- Advanced analytics dashboard with filters (gender, halqa, date range, percentage range, name search)
+- Sorting by percentage, score, or name
+- Bulk operations: approve, reject, activate, withdraw, assign halqa
+- Import users from Excel template
+- Export analytics & user data (CSV/XLSX)
+- Email notification settings
+
+---
+
+## Daily Card Categories
+
+| # | Category (Arabic) | Category (English) |
+|---|-------------------|-------------------|
+| 1 | وِرد القرآن | Quran recitation |
+| 2 | الأدعية | Duas (supplications) |
+| 3 | صلاة التراويح | Taraweeh prayer |
+| 4 | التهجد والوتر | Tahajjud & Witr |
+| 5 | صلاة الضحى | Duha prayer |
+| 6 | السنن الرواتب | Rawatib (Sunnah prayers) |
+| 7 | المقطع الأساسي | Main lesson |
+| 8 | المقطع الواجب | Required lesson |
+| 9 | المقطع الإثرائي | Enrichment lesson |
+| 10 | عبادة متعدية | Charity/community worship |
+| 11 | أعمال إضافية | Extra deeds |
+
+Each category is scored 0–10. Maximum daily score: **110 points**.
+
+---
+
+## Project Structure
 
 ```
-ramadan-platform/
+ramadan-program-management-basira/
+├── README.md
 ├── backend/
-│   ├── app/
-│   │   ├── __init__.py          # Flask App Factory
-│   │   ├── config.py            # Configuration
-│   │   ├── models/              # Database Models
-│   │   │   ├── user.py
-│   │   │   ├── daily_card.py
-│   │   │   ├── halqa.py
-│   │   │   └── site_settings.py
-│   │   ├── routes/              # API Endpoints
-│   │   │   ├── auth.py
-│   │   │   ├── participant.py
-│   │   │   ├── supervisor.py
-│   │   │   ├── admin.py
-│   │   │   └── settings.py
-│   │   └── utils/               # Helpers
-│   │       ├── decorators.py
-│   │       └── email.py
-│   ├── .env
-│   ├── requirements.txt
-│   └── run.py
+│   ├── main.py                     # FastAPI app entry point
+│   ├── requirements.txt            # Python dependencies
+│   ├── .env.example                # Environment template
+│   └── app/
+│       ├── config.py               # Settings (from .env)
+│       ├── database.py             # SQLAlchemy engine & session
+│       ├── dependencies.py         # Auth: JWT decode, role checker
+│       ├── models/
+│       │   ├── user.py             # User model
+│       │   ├── daily_card.py       # Daily card model (11 score fields)
+│       │   ├── halqa.py            # Halqa (circle) model
+│       │   └── site_settings.py    # Site settings model
+│       ├── routes/
+│       │   ├── auth.py             # Register, login, password reset
+│       │   ├── participant.py      # Card submission, stats
+│       │   ├── supervisor.py       # Halqa management, summaries, export
+│       │   ├── admin.py            # User/halqa CRUD, analytics, bulk ops
+│       │   └── settings.py         # Site settings
+│       ├── schemas/
+│       │   ├── user.py             # User request/response schemas
+│       │   ├── daily_card.py       # Card schemas
+│       │   ├── halqa.py            # Halqa schemas
+│       │   └── settings.py         # Settings schemas
+│       └── utils/
+│           └── email.py            # Email sending utilities
 └── frontend/
+    ├── package.json
     └── src/
-        ├── App.js
-        ├── context/AuthContext.js
-        ├── utils/api.js
-        ├── styles/global.css
-        ├── components/layout/Layout.js
-        └── pages/
-            ├── LoginPage.js
-            ├── RegisterPage.js
-            ├── DashboardPage.js
-            ├── DailyCardPage.js
-            ├── LeaderboardPage.js
-            ├── ProfilePage.js
-            ├── SupervisorPage.js
-            ├── AdminUsersPage.js
-            ├── AdminHalqasPage.js
-            ├── AdminAnalyticsPage.js
-            └── AdminSettingsPage.js
+        ├── App.js                  # Router & route definitions
+        ├── index.js                # Entry point
+        ├── context/
+        │   └── AuthContext.js      # Auth state & token management
+        ├── components/
+        │   ├── layout/
+        │   │   └── Layout.js       # Sidebar, header, navigation
+        │   └── Pagination.js       # Reusable pagination component
+        ├── pages/
+        │   ├── HomePage.js         # Landing page
+        │   ├── LoginPage.js        # Login
+        │   ├── RegisterPage.js     # Registration
+        │   ├── ForgotPasswordPage.js
+        │   ├── DashboardPage.js    # Role-based dashboard
+        │   ├── DailyCardPage.js    # Daily card form
+        │   ├── LeaderboardPage.js  # Leaderboard
+        │   ├── ProfilePage.js      # Profile settings
+        │   ├── SupervisorPage.js   # Supervisor panel (4 tabs)
+        │   ├── AdminUsersPage.js   # User management
+        │   ├── AdminHalqasPage.js  # Halqa management
+        │   ├── AdminAnalyticsPage.js # Analytics dashboard
+        │   └── AdminSettingsPage.js  # Site settings
+        ├── utils/
+        │   └── api.js              # Axios instance with JWT interceptor
+        └── styles/
+            └── global.css          # Global styles (RTL, dark theme vars)
 ```
 
 ---
 
-## 🔌 API Endpoints
+## API Endpoints
 
-### المصادقة (Auth)
-| Method | Endpoint | الوصف |
-|--------|----------|-------|
-| POST | `/api/auth/register` | تسجيل جديد |
-| POST | `/api/auth/login` | تسجيل دخول |
-| GET | `/api/auth/me` | بيانات المستخدم |
-| PUT | `/api/auth/profile` | تعديل الملف |
-| POST | `/api/auth/change-password` | تغيير كلمة المرور |
-| POST | `/api/auth/forgot-password` | طلب إعادة تعيين |
-| POST | `/api/auth/reset-password` | تعيين كلمة جديدة |
+### Auth (`/api/auth`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/register` | Register new participant |
+| POST | `/login` | Login (returns JWT token) |
+| GET | `/me` | Get current user + refresh token |
+| PUT | `/profile` | Update profile |
+| POST | `/change-password` | Change password |
+| POST | `/forgot-password` | Request reset code via email |
+| POST | `/reset-password` | Reset password with code |
 
-### المشارك (Participant)
-| Method | Endpoint | الوصف |
-|--------|----------|-------|
-| POST | `/api/participant/card` | حفظ/تعديل بطاقة |
-| GET | `/api/participant/card/:date` | بطاقة يوم محدد |
-| GET | `/api/participant/cards` | كل البطاقات |
-| GET | `/api/participant/stats` | الإحصائيات |
-| GET | `/api/participant/leaderboard` | الترتيب العام |
+### Participant (`/api/participant`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/card` | Submit/update daily card |
+| GET | `/card/{date}` | Get card for specific date |
+| GET | `/cards` | Get all cards (optional date filter) |
+| GET | `/stats` | Get personal statistics |
+| GET | `/leaderboard` | Get general leaderboard |
 
-### المشرف (Supervisor)
-| Method | Endpoint | الوصف |
-|--------|----------|-------|
-| GET | `/api/supervisor/members` | أعضاء الحلقة |
-| GET | `/api/supervisor/member/:id/cards` | بطاقات عضو |
-| GET | `/api/supervisor/daily-summary` | ملخص يومي |
-| GET | `/api/supervisor/weekly-summary` | ملخص أسبوعي |
+### Supervisor (`/api/supervisor`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/halqas` | Get available halqas |
+| GET | `/members` | Get halqa members |
+| GET | `/member/{id}/cards` | Get member's cards |
+| GET | `/member/{id}/card/{date}` | Get specific member card |
+| PUT | `/member/{id}/card/{date}` | Create/update member card |
+| DELETE | `/member/{id}/card/{date}` | Delete member card |
+| GET | `/leaderboard` | Halqa leaderboard |
+| GET | `/daily-summary` | Daily submission summary |
+| GET | `/weekly-summary` | Weekly summary |
+| GET | `/range-summary` | Custom date range summary |
+| GET | `/export` | Export cards (CSV/XLSX) |
 
-### السوبر آدمن (Admin)
-| Method | Endpoint | الوصف |
-|--------|----------|-------|
-| GET | `/api/admin/users` | قائمة المستخدمين |
-| POST | `/api/admin/registration/:id/approve` | قبول طلب |
-| POST | `/api/admin/registration/:id/reject` | رفض طلب |
-| POST | `/api/admin/user/:id/set-role` | تغيير صلاحية |
-| POST/GET | `/api/admin/halqa(s)` | إدارة الحلقات |
-| GET | `/api/admin/analytics` | التحليلات |
-| GET | `/api/admin/export` | تصدير البيانات |
-| POST | `/api/admin/import` | استيراد من Excel |
+### Admin (`/api/admin`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/users` | List users (with filters) |
+| GET | `/user/{id}` | Get user details |
+| PUT | `/user/{id}` | Update user |
+| POST | `/user/{id}/reset-password` | Reset user password |
+| POST | `/user/{id}/set-role` | Change user role |
+| POST | `/user/{id}/withdraw` | Withdraw user |
+| POST | `/user/{id}/activate` | Activate user |
+| POST | `/user/{id}/assign-halqa` | Assign user to halqa |
+| GET | `/registrations` | Get pending registrations |
+| POST | `/registration/{id}/approve` | Approve registration |
+| POST | `/registration/{id}/reject` | Reject registration |
+| GET | `/halqas` | List all halqas |
+| POST | `/halqa` | Create halqa |
+| PUT | `/halqa/{id}` | Update halqa |
+| POST | `/halqa/{id}/assign-members` | Assign members to halqa |
+| GET | `/analytics` | Analytics dashboard data |
+| GET | `/user/{id}/cards` | Get user cards (admin) |
+| GET | `/export` | Export analytics (CSV/XLSX) |
+| GET | `/export-users` | Export users list |
+| GET | `/import-template` | Download import template |
+| POST | `/import` | Import users from Excel |
+| POST | `/bulk/approve` | Bulk approve |
+| POST | `/bulk/reject` | Bulk reject |
+| POST | `/bulk/activate` | Bulk activate |
+| POST | `/bulk/withdraw` | Bulk withdraw |
+| POST | `/bulk/assign-halqa` | Bulk assign halqa |
+
+### Settings (`/api/settings`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Get site settings |
+| PUT | `/` | Update site settings |
+
+---
+
+## Frontend Routes
+
+| Path | Page | Access |
+|------|------|--------|
+| `/` | Home/Landing | Public |
+| `/login` | Login | Public |
+| `/register` | Registration | Public |
+| `/forgot-password` | Password Reset | Public |
+| `/dashboard` | Dashboard | All authenticated |
+| `/daily-card` | Daily Card Form | All authenticated |
+| `/profile` | Profile Settings | All authenticated |
+| `/leaderboard` | Leaderboard | Supervisor, Admin |
+| `/supervisor` | Supervisor Panel | Supervisor, Admin |
+| `/admin/users` | User Management | Admin only |
+| `/admin/halqas` | Halqa Management | Admin only |
+| `/admin/analytics` | Analytics | Admin only |
+| `/admin/settings` | Site Settings | Admin only |
+
+---
+
+## Database Schema
+
+### Users
+| Column | Type | Description |
+|--------|------|-------------|
+| id | Integer (PK) | Auto-increment ID |
+| member_id | Integer (unique) | Custom member number (starts at 1000) |
+| full_name | String | Full name |
+| gender | String | `male` or `female` |
+| age | Integer | Age |
+| phone | String | Phone number |
+| email | String (unique) | Email address |
+| password_hash | String | bcrypt hash |
+| country | String | Country |
+| referral_source | String | How they heard about the program |
+| status | String | `pending`, `active`, `rejected`, `withdrawn` |
+| role | String | `participant`, `supervisor`, `super_admin` |
+| rejection_note | String | Note when rejected |
+| halqa_id | Integer (FK) | Assigned halqa |
+| created_at | DateTime | Registration date |
+| updated_at | DateTime | Last update |
+
+### Daily Cards
+| Column | Type | Description |
+|--------|------|-------------|
+| id | Integer (PK) | Auto-increment ID |
+| user_id | Integer (FK) | Card owner |
+| date | Date (unique with user_id) | Card date |
+| quran | Float (0-10) | Quran recitation score |
+| duas | Float (0-10) | Duas score |
+| taraweeh | Float (0-10) | Taraweeh prayer score |
+| tahajjud | Float (0-10) | Tahajjud & Witr score |
+| duha | Float (0-10) | Duha prayer score |
+| rawatib | Float (0-10) | Sunnah prayers score |
+| main_lesson | Float (0-10) | Main lesson score |
+| required_lesson | Float (0-10) | Required lesson score |
+| enrichment_lesson | Float (0-10) | Enrichment lesson score |
+| charity_worship | Float (0-10) | Community worship score |
+| extra_work | Float (0-10) | Extra deeds score |
+| extra_work_description | Text | Description of extra deeds |
+
+### Halqas
+| Column | Type | Description |
+|--------|------|-------------|
+| id | Integer (PK) | Auto-increment ID |
+| name | String (unique) | Halqa name |
+| supervisor_id | Integer (FK) | Assigned supervisor |
+| created_at | DateTime | Creation date |
+| updated_at | DateTime | Last update |
+
+---
+
+## Ramadan Period
+
+The application is configured for **Ramadan 2026**:
+- Start: **February 19, 2026**
+- End: **March 19, 2026**
+
+To change the dates, update `RAMADAN_START` and `RAMADAN_END` in:
+- `backend/app/routes/supervisor.py`
+- `backend/app/routes/participant.py`
+
+---
+
+## License
+
+This project is private and proprietary.
