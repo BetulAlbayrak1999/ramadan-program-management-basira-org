@@ -93,7 +93,7 @@ jobs:
           
           echo "📝 Creating .env file for PostgreSQL..."
           # Create .env file for PostgreSQL
-          cat > .env <<'ENVEOF'
+          cat > .env <<-'ENVEOF'
         # PostgreSQL Configuration
         POSTGRES_DB=${{ vars.POSTGRES_DB || 'ramadan_db' }}
         POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
