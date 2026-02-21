@@ -159,9 +159,17 @@ export default function DailyCardPage() {
   const dateStr = toISODate(currentDate);
   const isOutsideRamadan = dateStr < RAMADAN_START || dateStr > RAMADAN_END;
 
-  const supervisorWhatsappLink = supervisor?.phone
-    ? `https://wa.me/${supervisor.phone.replace(/[^0-9]/g, '')}`
-    : null;
+  const supervisorWhatsappLink = (() => {
+    if (!supervisor?.phone) return null;
+    let cleaned = (supervisor.phone || '').replace(/[\s\-()]/g, '');
+    if (cleaned.startsWith('00')) cleaned = '+' + cleaned.slice(2);
+    else if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
+    const prefix = cleaned.startsWith('+') ? '+' : '';
+    cleaned = prefix + cleaned.replace(/\D/g, '');
+    const digits = cleaned.replace('+', '');
+    const msg = encodeURIComponent(`السلام عليكم يا ${supervisor.full_name || 'مشرفي'}، تم تسليم البطاقة اليومية بتاريخ ${dateStr}`);
+    return `https://wa.me/${digits}?text=${msg}`;
+  })();
 
   return (
     <div>
