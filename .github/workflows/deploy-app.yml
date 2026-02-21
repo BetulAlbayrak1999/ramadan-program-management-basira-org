@@ -28,7 +28,7 @@ jobs:
 
     - name: Deploy Application via SSH
       run: |
-        ssh -tt -o  StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << ENDSSH
+        ssh -o  StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << ENDSSH
           echo "================================================"
           echo "Starting Ramadan Program Management Deployment"
           echo "Time: $(date)"
@@ -37,36 +37,33 @@ jobs:
           cd /opt/ramadan-program/ramadan-program-management-basira-org
 
           echo "📥 Pulling latest code from master branch..."
-          sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org reset --hard
-          sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org clean -fd
-          sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org checkout master
+          # sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org reset --hard
+          # sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org clean -fd
+          # sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org checkout master
           sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org pull origin master          
           echo "✅ Pull completed"
           echo "📝 Creating .env file..."
-          cat > .env << ENVEOF
-        # Database Configuration
-        DATABASE_URL=${{ secrets.DATABASE_URL }}
-        POSTGRES_DB=${{ vars.POSTGRES_DB }}
 
-        # JWT Configuration
-        JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
-        JWT_ACCESS_TOKEN_EXPIRES=${{ vars.JWT_ACCESS_TOKEN_EXPIRES }}
+          rm -f .env
+          touch .env
+          printf "DATABASE_URL=${{ secrets.DATABASE_URL }}\n" | tee .env > /dev/null
+          printf "POSTGRES_DB=${{ vars.POSTGRES_DB }}\n" |  tee -a .env > /dev/null
 
-        # Email Configuration
-        MAIL_SERVER=${{ vars.MAIL_SERVER }}
-        MAIL_PORT=${{ vars.MAIL_PORT }}
-        MAIL_USE_TLS=${{ vars.MAIL_USE_TLS }}
-        MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
-        MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+          printf "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}\n" | tee -a .env > /dev/null
+          printf "JWT_ACCESS_TOKEN_EXPIRES=${{ vars.JWT_ACCESS_TOKEN_EXPIRES }}\n" | tee -a .env > /dev/null
 
-        # Super Admin
-        SUPER_ADMIN_EMAIL=${{ secrets.SUPER_ADMIN_EMAIL }}
-        SUPER_ADMIN_PASSWORD=${{ secrets.SUPER_ADMIN_PASSWORD }}
+          printf "MAIL_SERVER=${{ vars.MAIL_SERVER }}\n" | tee -a .env > /dev/null
+          printf "MAIL_PORT=${{ vars.MAIL_PORT }}\n" | tee -a .env > /dev/null
+          printf "MAIL_USE_TLS=${{ vars.MAIL_USE_TLS }}\n" | tee -a .env > /dev/null
+          printf "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}\n" | tee -a .env > /dev/null
+          printf "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}\n" | tee -a .env > /dev/null
 
-        # Application Settings
-        ENABLE_EMAIL_NOTIFICATIONS=${{ vars.ENABLE_EMAIL_NOTIFICATIONS }}
-        ENVEOF
+          printf "SUPER_ADMIN_EMAIL=${{ secrets.SUPER_ADMIN_EMAIL }}\n" | tee -a .env > /dev/null
+          printf "SUPER_ADMIN_PASSWORD=${{ secrets.SUPER_ADMIN_PASSWORD }}\n" | tee -a .env > /dev/null
 
+          printf "ENABLE_EMAIL_NOTIFICATIONS=${{ vars.ENABLE_EMAIL_NOTIFICATIONS }}\n" | tee -a .env > /dev/null
+
+          echo "✅ .env file created"
 
           echo "🐳 Building and deploying with Docker Compose..."
           sudo /usr/bin/docker compose up -d --build --force-recreate
