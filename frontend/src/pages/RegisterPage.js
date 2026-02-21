@@ -117,7 +117,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">عن طريق من عرفت بالموقع؟</label>
+            <label className="form-label">كيف عرفت بالموقع؟</label>
             <input className="form-input" value={form.referral_source}
               onChange={(e) => set('referral_source', e.target.value)} placeholder="اختياري" />
           </div>

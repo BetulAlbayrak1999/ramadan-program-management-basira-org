@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Moon, BookOpen, Users, Trophy, Star, ArrowLeft } from 'lucide-react';
+import { BookOpen, Users, Trophy, Star, ArrowLeft } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -15,7 +15,7 @@ export default function HomePage() {
         padding: '1.2rem 2rem', maxWidth: 1100, margin: '0 auto',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, fontSize: '1.1rem', color: '#1a7a6d' }}>
-          <Moon size={22} /> بصيرة
+          <img src="/logo.png" alt="بصيرة" style={{ height: 36 }} /> بصيرة
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <Link to="/login" className="btn btn-secondary btn-sm">تسجيل الدخول</Link>

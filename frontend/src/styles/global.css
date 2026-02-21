@@ -144,6 +144,10 @@ a {
   color: var(--gold);
 }
 
+.sidebar-logo img {
+  border-radius: 6px;
+}
+
 .sidebar-subtitle {
   font-size: 0.7rem;
   color: var(--sidebar-text);
