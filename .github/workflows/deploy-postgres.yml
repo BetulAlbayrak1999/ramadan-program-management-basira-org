@@ -38,7 +38,7 @@ jobs:
 
     - name: Deploy PostgreSQL via SSH
       run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << 'EOF'
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << EOF
           
           echo "================================================"
           echo "Starting PostgreSQL Database Deployment"
@@ -102,7 +102,7 @@ jobs:
           
           echo "📝 Creating .env file for PostgreSQL..."
           # Create .env file for PostgreSQL
-          cat > .env <<-'ENVEOF'
+          cat > .env << ENVEOF
         # PostgreSQL Configuration
         POSTGRES_DB=${{ vars.POSTGRES_DB}}
         POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
@@ -110,8 +110,6 @@ jobs:
         MONITOR_USER_PASSWORD=${{ secrets.MONITOR_USER_PASSWORD }}
         ENVEOF
           
-          echo "🔒 Setting .env permissions..."
-          chmod 600 .env
           
           echo "🐳 Starting PostgreSQL with Docker Compose..."
           echo "Running: sudo /usr/bin/docker compose -f /opt/ramadan-program/ramadan-program-management-basira-org/devops/docker-compose.postgres.yml up -d"
@@ -162,12 +160,3 @@ jobs:
           echo "Time: $(date)"
           echo "================================================"
         EOF
-    # - name: Notify Deployment Status
-    #   if: always()
-    #   run: |
-    #     if [ "${{ job.status }}" == "success" ]; then
-    #       echo "✅ PostgreSQL deployment succeeded"
-    #     else
-    #       echo "❌ PostgreSQL deployment failed"
-    #       exit 1
-    #     fi
