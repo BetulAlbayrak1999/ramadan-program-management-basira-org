@@ -162,7 +162,6 @@ jobs:
           echo "Time: $(date)"
           echo "================================================"
         EOF
-
     # - name: Notify Deployment Status
     #   if: always()
     #   run: |
