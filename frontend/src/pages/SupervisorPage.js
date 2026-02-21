@@ -6,7 +6,7 @@ import {
   Eye, ClipboardList, Trophy, Save, Users,
   BookOpen, Heart, Building2, Moon, Sun, Gem, User,
   Headphones, BookMarked, Lightbulb, HeartHandshake, Star, X, Filter,
-  Phone, Mail, MapPin, Calendar, FileDown, Search, Plus, Trash2,
+  Phone, Mail, MapPin, Calendar, FileDown, Search, Plus, Trash2, CheckCircle, XCircle, MessageCircle,
 } from 'lucide-react';
 import Pagination, { paginate } from '../components/Pagination';
 
@@ -66,6 +66,11 @@ export default function SupervisorPage() {
   const [searchName, setSearchName] = useState('');
   const [searchGender, setSearchGender] = useState('');
 
+  // Daily tracking tab
+  const [dailyDate, setDailyDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dailySummary, setDailySummary] = useState(null);
+  const [dailyView, setDailyView] = useState('not_submitted'); // 'submitted' | 'not_submitted'
+
   // Add card for member
   const [addCardDate, setAddCardDate] = useState('');
 
@@ -105,8 +110,13 @@ export default function SupervisorPage() {
         .then((res) => { setLeaderboard(res.data.leaderboard); setHalqa(res.data.halqa); setPageLeaderboard(1); })
         .catch((err) => toast.error(err.response?.data?.detail || 'خطأ'))
         .finally(() => setLoading(false));
+    } else if (tab === 'daily') {
+      api.get(`/supervisor/daily-summary?date=${dailyDate}${halqaParam}`)
+        .then((res) => { setDailySummary(res.data); setHalqa(res.data.halqa); })
+        .catch((err) => toast.error(err.response?.data?.detail || 'خطأ'))
+        .finally(() => setLoading(false));
     }
-  }, [tab, dateRange, halqaParam]);
+  }, [tab, dateRange, dailyDate, halqaParam]);
 
   const viewMemberCards = async (memberId) => {
     try {
@@ -178,8 +188,12 @@ export default function SupervisorPage() {
       api.get(`/supervisor/leaderboard?_=1${halqaParam}`)
         .then((res) => { setLeaderboard(res.data.leaderboard); setHalqa(res.data.halqa); })
         .catch(() => {});
+    } else if (tab === 'daily') {
+      api.get(`/supervisor/daily-summary?date=${dailyDate}${halqaParam}`)
+        .then((res) => { setDailySummary(res.data); setHalqa(res.data.halqa); })
+        .catch(() => {});
     }
-  }, [tab, dateRange, halqaParam]);
+  }, [tab, dateRange, dailyDate, halqaParam]);
 
   const handleDeleteCard = async () => {
     if (!cardMember || !cardDate) return;
@@ -215,6 +229,18 @@ export default function SupervisorPage() {
       if (normalizedGender !== searchGender) return false;
     }
     return true;
+  };
+
+  const getWhatsAppLink = (phone, name, dateStr) => {
+    // Clean phone: remove spaces, dashes, leading zeros
+    let cleaned = (phone || '').replace(/[\s\-()]/g, '');
+    if (cleaned.startsWith('00')) cleaned = '+' + cleaned.slice(2);
+    else if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
+    // Remove any non-digit except leading +
+    const prefix = cleaned.startsWith('+') ? '+' : '';
+    cleaned = prefix + cleaned.replace(/\D/g, '');
+    const msg = encodeURIComponent(`السلام عليكم ${name}، نذكرك بتعبئة بطاقتك اليومية ليوم ${dateStr}. بارك الله فيك.`);
+    return `https://wa.me/${cleaned.replace('+', '')}?text=${msg}`;
   };
 
   const exportReport = async (format) => {
@@ -283,6 +309,9 @@ export default function SupervisorPage() {
         </button>
         <button className={`tab ${tab === 'leaderboard' ? 'active' : ''}`} onClick={() => setTab('leaderboard')}>
           <Trophy size={14} /> ترتيب الأعضاء
+        </button>
+        <button className={`tab ${tab === 'daily' ? 'active' : ''}`} onClick={() => setTab('daily')}>
+          <Calendar size={14} /> المتابعة اليومية
         </button>
       </div>
 
@@ -479,6 +508,159 @@ export default function SupervisorPage() {
             </div>
           );
         })()
+      )}
+
+      {/* ─── Daily Tracking Tab ─── */}
+      {tab === 'daily' && (
+        <div>
+          <div className="filters-bar mb-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>اليوم</label>
+              <input type="date" className="filter-input" value={dailyDate}
+                onChange={(e) => setDailyDate(e.target.value)} dir="ltr" />
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="loading"><div className="spinner" /></div>
+          ) : dailySummary ? (
+            <div>
+              {/* Stats */}
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-icon"><Users size={20} /></div>
+                  <div className="stat-value">{dailySummary.total_members}</div>
+                  <div className="stat-label">إجمالي المشاركين</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon"><CheckCircle size={20} /></div>
+                  <div className="stat-value" style={{ color: 'var(--success, #22c55e)' }}>{dailySummary.submitted_count}</div>
+                  <div className="stat-label">سلّموا البطاقة</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon"><XCircle size={20} /></div>
+                  <div className="stat-value gold">{dailySummary.not_submitted_count}</div>
+                  <div className="stat-label">لم يسلّموا</div>
+                </div>
+              </div>
+
+              {/* Toggle submitted / not_submitted */}
+              <div className="tabs mb-2">
+                <button className={`tab ${dailyView === 'not_submitted' ? 'active' : ''}`}
+                  onClick={() => setDailyView('not_submitted')}>
+                  <XCircle size={14} /> لم يسلّموا ({dailySummary.not_submitted_count})
+                </button>
+                <button className={`tab ${dailyView === 'submitted' ? 'active' : ''}`}
+                  onClick={() => setDailyView('submitted')}>
+                  <CheckCircle size={14} /> سلّموا ({dailySummary.submitted_count})
+                </button>
+              </div>
+
+              {/* Not submitted list */}
+              {dailyView === 'not_submitted' && (
+                dailySummary.not_submitted.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-state-icon"><CheckCircle size={48} /></div>
+                    <div className="empty-state-text">جميع المشاركين سلّموا بطاقاتهم</div>
+                  </div>
+                ) : (
+                  <div className="card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                        لم يسلّموا البطاقة — {dailySummary.date}
+                      </span>
+                      {dailySummary.not_submitted.length > 0 && (
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(`السلام عليكم، نذكركم بتعبئة البطاقة اليومية ليوم ${dailySummary.date}. بارك الله فيكم.`)}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>
+                          <MessageCircle size={14} /> تذكير جماعي
+                        </a>
+                      )}
+                    </div>
+                    <div className="table-container">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>#</th><th>رقم العضوية</th><th>الاسم</th><th>الجنس</th><th>الهاتف</th><th>تذكير</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dailySummary.not_submitted
+                            .filter(applyFilters)
+                            .map((m, i) => (
+                            <tr key={m.id}>
+                              <td>{i + 1}</td>
+                              <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{m.member_id}</td>
+                              <td style={{ fontWeight: 600 }}>{m.full_name}</td>
+                              <td>{['male', 'ذكر'].includes(m.gender) ? 'ذكر' : 'أنثى'}</td>
+                              <td dir="ltr" style={{ fontSize: '0.8rem' }}>{m.phone}</td>
+                              <td>
+                                <a href={getWhatsAppLink(m.phone, m.full_name, dailySummary.date)}
+                                  target="_blank" rel="noopener noreferrer"
+                                  className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>
+                                  <MessageCircle size={13} /> واتساب
+                                </a>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )
+              )}
+
+              {/* Submitted list */}
+              {dailyView === 'submitted' && (
+                dailySummary.submitted.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-state-icon"><XCircle size={48} /></div>
+                    <div className="empty-state-text">لا أحد سلّم البطاقة بعد</div>
+                  </div>
+                ) : (
+                  <div className="card">
+                    <div className="table-container">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>#</th><th>رقم العضوية</th><th>الاسم</th><th>المجموع</th><th>النسبة</th><th>التفاصيل</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dailySummary.submitted
+                            .filter((s) => applyFilters(s.member))
+                            .map((s, i) => (
+                            <tr key={s.member.id}>
+                              <td>{i + 1}</td>
+                              <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{s.member.member_id}</td>
+                              <td style={{ fontWeight: 600 }}>{s.member.full_name}</td>
+                              <td style={{ fontWeight: 700, color: 'var(--accent)' }}>{s.card.total_score} / {s.card.max_score}</td>
+                              <td>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <div className="progress-bar" style={{ width: 50, height: 6 }}>
+                                    <div className="progress-fill green" style={{ width: `${s.card.percentage}%` }} />
+                                  </div>
+                                  <span style={{ fontWeight: 700, fontSize: '0.8rem' }}>{s.card.percentage}%</span>
+                                </div>
+                              </td>
+                              <td>
+                                <button className="btn btn-secondary btn-sm"
+                                  onClick={() => openCardDetail(s.member.id, dailySummary.date)}>
+                                  عرض
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+          ) : null}
+        </div>
       )}
 
       {/* ─── Member Detail Modal ─── */}
