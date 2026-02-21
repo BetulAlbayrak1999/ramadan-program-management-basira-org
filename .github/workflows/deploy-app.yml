@@ -29,7 +29,7 @@ jobs:
     - name: Deploy Application via SSH
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << 'ENDSSH'
-          set -e  # Exit on any error
+          #set -e  # Exit on any error
           
           echo "================================================"
           echo "Starting Ramadan Program Management Deployment"
@@ -40,9 +40,14 @@ jobs:
           cd /opt/ramadan-program/ramadan-program-management-basira-org || exit 1
           
           echo "📥 Pulling latest code from master branch..."
+          sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org reset --hard
+          sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org clean -fd
           sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org fetch origin master
+          echo "✅ Fetch completed"
           sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org checkout master
+          echo "✅ Checkout completed"
           sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org pull origin master
+          echo "✅ Pull completed"
           
           echo "📝 Creating .env file..."
           # Create .env file for application with all required variables
