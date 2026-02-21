@@ -41,10 +41,11 @@ def _resolve_halqa(user, db, halqa_id=None):
 
 
 def _get_members(db, halqa):
-    """Get active members for a halqa, or all active participants if halqa is None."""
+    """Get active members for a halqa, or all active users if halqa is None (super_admin)."""
     if halqa:
         return db.query(User).filter_by(halqa_id=halqa.id, status="active").all()
-    return db.query(User).filter_by(status="active", role="participant").all()
+    # Super admin sees all active users (including supervisors and unassigned)
+    return db.query(User).filter(User.status == "active", User.role != "super_admin").all()
 
 
 def _verify_member_access(user, member_id, db):
