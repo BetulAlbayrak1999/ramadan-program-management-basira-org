@@ -28,7 +28,7 @@ jobs:
 
     - name: Deploy Application via SSH
       run: |
-        ssh -o  StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << ENDSSH
+        ssh -tt -o  StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p 199 << ENDSSH
           echo "================================================"
           echo "Starting Ramadan Program Management Deployment"
           echo "Time: $(date)"
@@ -36,48 +36,44 @@ jobs:
 
           cd /opt/ramadan-program/ramadan-program-management-basira-org
 
-          echo "📥 Pulling latest code from master branch..."
-          # sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org reset --hard
-          # sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org clean -fd
-          # sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org checkout master
-          sudo /usr/bin/git -C /opt/ramadan-program/ramadan-program-management-basira-org pull origin master          
-          echo "✅ Pull completed"
-          echo "📝 Creating .env file..."
+          git --hard
+          git -fd
+          git checkout master
+          git pull origin master          
 
-          rm -f .env
-          touch .env
-          printf "DATABASE_URL=${{ secrets.DATABASE_URL }}\n" | tee .env > /dev/null
-          printf "POSTGRES_DB=${{ vars.POSTGRES_DB }}\n" |  tee -a .env > /dev/null
+          cat > .env << ENVEOF
+        DATABASE_URL=${{ secrets.DATABASE_URL }}
+        POSTGRES_DB=${{ vars.POSTGRES_DB }}
 
-          printf "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}\n" | tee -a .env > /dev/null
-          printf "JWT_ACCESS_TOKEN_EXPIRES=${{ vars.JWT_ACCESS_TOKEN_EXPIRES }}\n" | tee -a .env > /dev/null
+        JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+        JWT_ACCESS_TOKEN_EXPIRES=${{ vars.JWT_ACCESS_TOKEN_EXPIRES }}
 
-          printf "MAIL_SERVER=${{ vars.MAIL_SERVER }}\n" | tee -a .env > /dev/null
-          printf "MAIL_PORT=${{ vars.MAIL_PORT }}\n" | tee -a .env > /dev/null
-          printf "MAIL_USE_TLS=${{ vars.MAIL_USE_TLS }}\n" | tee -a .env > /dev/null
-          printf "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}\n" | tee -a .env > /dev/null
-          printf "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}\n" | tee -a .env > /dev/null
+        MAIL_SERVER=${{ vars.MAIL_SERVER }}
+        MAIL_PORT=${{ vars.MAIL_PORT }}
+        MAIL_USE_TLS=${{ vars.MAIL_USE_TLS }}
+        MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
+        MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
 
-          printf "SUPER_ADMIN_EMAIL=${{ secrets.SUPER_ADMIN_EMAIL }}\n" | tee -a .env > /dev/null
-          printf "SUPER_ADMIN_PASSWORD=${{ secrets.SUPER_ADMIN_PASSWORD }}\n" | tee -a .env > /dev/null
+        SUPER_ADMIN_EMAIL=${{ secrets.SUPER_ADMIN_EMAIL }}
+        SUPER_ADMIN_PASSWORD=${{ secrets.SUPER_ADMIN_PASSWORD }}
 
-          printf "ENABLE_EMAIL_NOTIFICATIONS=${{ vars.ENABLE_EMAIL_NOTIFICATIONS }}\n" | tee -a .env > /dev/null
+        ENABLE_EMAIL_NOTIFICATIONS=${{ vars.ENABLE_EMAIL_NOTIFICATIONS }}
+        ENVEOF
 
-          echo "✅ .env file created"
 
-          echo "🐳 Building and deploying with Docker Compose..."
-          sudo /usr/bin/docker compose up -d --build --force-recreate
+          echo "Building and deploying with Docker Compose"
+          docker compose up -d --build --force-recreate
 
           echo "⏳ Waiting for application..."
           sleep 10
 
           echo "🏥 Checking application..."
-          if sudo /usr/bin/docker ps | grep -q "ramadan_app"; then
+          if docker ps | grep -q "ramadan_app"; then
             echo "✅ Container is running"
-            sudo /usr/bin/docker logs ramadan_app --tail 20
+            docker logs ramadan_app --tail 20
           else
             echo "❌ Container failed to start"
-            sudo /usr/bin/docker logs ramadan_app --tail 50
+            docker logs ramadan_app --tail 50
             exit 1
           fi
 
