@@ -14,7 +14,7 @@ export default function AdminAnalyticsPage() {
     gender: '', halqa_id: '', member: '', supervisor: '',
     min_pct: '', max_pct: '',
     date_from: '', date_to: '',
-    sort_by: 'score', sort_order: 'desc',
+    sort_by: 'percentage', sort_order: 'desc',
   });
 
   // Member cards modal
@@ -139,6 +139,7 @@ export default function AdminAnalyticsPage() {
         <input className="filter-input" type="number" placeholder="أعلى %" style={{ width: 80 }}
           value={filters.max_pct} onChange={(e) => updateFilter('max_pct', e.target.value)} />
         <select className="filter-input" value={filters.sort_by} onChange={(e) => updateFilter('sort_by', e.target.value)}>
+          <option value="percentage">ترتيب بالنسبة</option>
           <option value="score">ترتيب بالنقاط</option>
           <option value="name">ترتيب أبجدي</option>
         </select>

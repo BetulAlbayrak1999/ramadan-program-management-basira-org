@@ -415,6 +415,8 @@ def _build_analytics_results(
 
     if sort_by == "name":
         results.sort(key=lambda x: x["full_name"], reverse=(sort_order == "desc"))
+    elif sort_by == "percentage":
+        results.sort(key=lambda x: x["percentage"], reverse=(sort_order == "desc"))
     else:
         results.sort(key=lambda x: x["total_score"], reverse=(sort_order == "desc"))
 
@@ -528,8 +530,8 @@ def export_data(
             "الجنس": gender_map.get(r["gender"], r["gender"]),
             "الحلقة": r["halqa_name"],
             "المشرف": r["supervisor_name"],
-            "مجموع النقاط": r["total_score"],
-            "الحد الأعلى": r["max_score"],
+            "المجموع الحالي": r["total_score"],
+            "المجموع العام": r["max_score"],
             "عدد البطاقات": r["cards_count"],
             "النسبة %": r["percentage"],
         })
