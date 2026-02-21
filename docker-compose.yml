@@ -61,3 +61,4 @@ networks:
 volumes:
   app_logs:
     name: ramadan_app_logs
+
